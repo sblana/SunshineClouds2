@@ -23,7 +23,8 @@ Rebuilt from the ground up to use the compositor system, improving performance a
 6. Add a directional light to the "Tracked Directional Lights" array on the driver
 7. Have fun!
 
-## Eye candy
+## Eye candy 
+(Terrain not included, that comes later xD )
 <img src="https://github.com/Bonkahe/SunshineClouds2/blob/main/githubstuff/PreviewGif_Environment.gif">
 <img src="https://github.com/Bonkahe/SunshineClouds2/blob/main/githubstuff/PreviewGif_Tools.gif">
 
