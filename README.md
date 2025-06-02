@@ -4,7 +4,7 @@
 
 ## Updates:
 version 2.0:
-Rebuild from the ground up to use the compositor system, improving performance and visuals.
+Rebuilt from the ground up to use the compositor system, improving performance and visuals.
 
 ## Features
 * Fully volumetric clouds, extendable as far from the camera as you want with the correct settings
