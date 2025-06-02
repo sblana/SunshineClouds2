@@ -1,0 +1,100 @@
+[gd_scene load_steps=13 format=3 uid="uid://c1jy5gwigpsrl"]
+
+[ext_resource type="CompositorEffect" uid="uid://lftlvgnckiw" path="res://addons/SunshineClouds2/ExampleCloudsResource.tres" id="1_o8tia"]
+[ext_resource type="Script" uid="uid://djusduuxf0voj" path="res://addons/SunshineClouds2/SunshineCloudsDriver.gd" id="2_nv18y"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_afwv5"]
+sky_horizon_color = Color(0.662243, 0.671743, 0.686743, 1)
+ground_horizon_color = Color(0.662243, 0.671743, 0.686743, 1)
+
+[sub_resource type="Sky" id="Sky_unbdf"]
+sky_material = SubResource("ProceduralSkyMaterial_afwv5")
+
+[sub_resource type="Environment" id="Environment_nuogy"]
+background_mode = 2
+sky = SubResource("Sky_unbdf")
+tonemap_mode = 2
+glow_enabled = true
+
+[sub_resource type="Compositor" id="Compositor_ftegy"]
+compositor_effects = Array[CompositorEffect]([ExtResource("1_o8tia")])
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ts5u0"]
+sky_horizon_color = Color(0.662243, 0.671743, 0.686743, 1)
+ground_horizon_color = Color(0.662243, 0.671743, 0.686743, 1)
+
+[sub_resource type="Sky" id="Sky_tfosc"]
+sky_material = SubResource("ProceduralSkyMaterial_ts5u0")
+
+[sub_resource type="Environment" id="Environment_mtpi3"]
+background_mode = 2
+sky = SubResource("Sky_tfosc")
+tonemap_mode = 2
+glow_enabled = true
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_o8tia"]
+height = 1.0
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_o8tia"]
+size = Vector2(10, 10)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_nv18y"]
+
+[node name="ExampleScene" type="Node3D"]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, 0.75, -0.433013, -8, 2, -2)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_nuogy")
+compositor = SubResource("Compositor_ftegy")
+
+[node name="SunshineCloudsDriverGD" type="Node" parent="." node_paths=PackedStringArray("tracked_directional_lights")]
+script = ExtResource("2_nv18y")
+update_continuously = true
+clouds_resource = ExtResource("1_o8tia")
+ambience_sample_environment = SubResource("Environment_mtpi3")
+tracked_directional_lights = [NodePath("../DirectionalLight3D")]
+tracked_directional_light_shadow_steps = Array[int]([32])
+extra_large_clouds_pos = Vector3(-100346, 0, -100346)
+large_clouds_pos = Vector3(56931.7, 0, 56931.7)
+medium_clouds_pos = Vector3(1882.41, 0, 1882.41)
+small_clouds_pos = Vector3(1151.25, -1151.25, 1151.25)
+metadata/_custom_type_script = "uid://djusduuxf0voj"
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1000, 0, 0, 0, 12000, 0, 0, 0, 1000, 6000, 6000, 0)
+mesh = SubResource("CylinderMesh_o8tia")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1000, 0, 0, 0, 12000, 0, 0, 0, 1000, 6000, 6000, -40000)
+mesh = SubResource("CylinderMesh_o8tia")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1000, 0, 0, 0, 12000, 0, 0, 0, 1000, 6000, 6000, -20000)
+mesh = SubResource("CylinderMesh_o8tia")
+
+[node name="MeshInstance3D4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1000, 0, 0, 0, 12000, 0, 0, 0, 1000, 6000, 6000, -60000)
+mesh = SubResource("CylinderMesh_o8tia")
+
+[node name="MeshInstance3D5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1000, 0, 0, 0, 12000, 0, 0, 0, 1000, 6000, 6000, -80000)
+mesh = SubResource("CylinderMesh_o8tia")
+
+[node name="MeshInstance3D6" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_o8tia")
+
+[node name="MeshInstance3D7" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("CapsuleMesh_nv18y")
+
+[node name="Label3D" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.985589, 0.16916, 0, -0.16916, 0.985589, 0, 2.61482, -5.55018)
+modulate = Color(0, 0, 0, 1)
+text = "This is an example scene, 
+please note the quality settings are all set to high, 
+this is mostly just an example, 
+feel free to try turning down the settings."
+font_size = 128
