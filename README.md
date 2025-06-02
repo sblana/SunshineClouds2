@@ -1,5 +1,8 @@
 <img src="https://github.com/Bonkahe/SunshineClouds2/blob/main/githubstuff/Logo.png?raw=true">
 
+<img src="https://github.com/Bonkahe/SunshineClouds2/blob/main/githubstuff/PreviewGif_Environment.gif">
+<img src="https://github.com/Bonkahe/SunshineClouds2/blob/main/githubstuff/PreviewGif_Tools.gif">
+
 # SunshineClouds
 
 ## Updates:
