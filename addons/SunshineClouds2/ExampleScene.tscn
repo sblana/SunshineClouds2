@@ -57,10 +57,10 @@ clouds_resource = ExtResource("1_o8tia")
 ambience_sample_environment = SubResource("Environment_mtpi3")
 tracked_directional_lights = [NodePath("../DirectionalLight3D")]
 tracked_directional_light_shadow_steps = Array[int]([32])
-extra_large_clouds_pos = Vector3(-100346, 0, -100346)
-large_clouds_pos = Vector3(56931.7, 0, 56931.7)
-medium_clouds_pos = Vector3(1882.41, 0, 1882.41)
-small_clouds_pos = Vector3(1151.25, -1151.25, 1151.25)
+extra_large_clouds_pos = Vector3(-56648.19, 0, -56648.19)
+large_clouds_pos = Vector3(-37109.22, 0, -37109.22)
+medium_clouds_pos = Vector3(-5065.0083, 0, -5065.0083)
+small_clouds_pos = Vector3(-1010.22107, 1010.22107, -1010.22107)
 metadata/_custom_type_script = "uid://djusduuxf0voj"
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]

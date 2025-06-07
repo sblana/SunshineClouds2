@@ -4,11 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-
-//THIS IS MOSTLY JUST LEFT OVER
-//The code here is not feature parity to the GDScript version, mostly because the editor plugin scripts only work well with the gdscript version of the driver/clouds resource.
-//I'll probably try and get this working later, but for now just use the gdscript version unless you know what your doing.
-
 [Tool]
 [GlobalClass]
 public partial class SunshineClouds : CompositorEffect

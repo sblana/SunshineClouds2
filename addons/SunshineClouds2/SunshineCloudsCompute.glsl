@@ -705,7 +705,7 @@ void main() {
 			float AtmosphericsDistancePower = length(vec3(RayleighScatteringCoef * totalRlh + MieScatteringCoef * totalMie));
 			vec3 atmospherics = 22.0 * (ambientfogdistancecolor * RayleighScatteringCoef * totalRlh + pMie * MieScatteringCoef * directionalLights[lightI].color.rgb * sunAOPower * totalMie);
 
-			lightColor.rgb = mix(lightColor.rgb, atmospherics, (AtmosphericsDistancePower * sunUpWeight) / directionalLightCount); //causes jitter in the sky
+			lightColor.rgb = mix(lightColor.rgb, atmospherics, (AtmosphericsDistancePower * sunUpWeight)); //causes jitter in the sky
 		}
 	}
 

@@ -6,37 +6,37 @@ class_name SunshineCloudsGD
 
 
 @export_group("Basic Settings")
-@export_range(0, 1) var clouds_coverage : float = 0.69
+@export_range(0, 1) var clouds_coverage : float = 0.6
 @export_range(0, 20) var clouds_density : float = 1.0
-@export_range(0, 1) var atmospheric_density : float = 0.34
+@export_range(0, 2) var atmospheric_density : float = 0.5
 @export_range(0, 10) var lighting_density : float = 0.55
 @export_range(0, 1) var fog_effect_ground : float = 1.0
 
 @export_subgroup("Colors")
 @export_range(0, 1) var clouds_anisotropy : float = 0.3
-@export var cloud_ambient_color : Color = Color("#2d3940")
-@export var cloud_ambient_tint : Color = Color("#82bee3")
-@export var atmosphere_color : Color = Color("#bce1ff")
-@export var ambient_occlusion_color : Color = Color("#9c301381")
+@export var cloud_ambient_color : Color = Color(0.352, 0.624, 0.784, 1.0)
+@export var cloud_ambient_tint : Color = Color(0.352, 0.624, 0.784, 1.0)
+@export var atmosphere_color : Color = Color(0.801, 0.893, 0.962, 1.0)
+@export var ambient_occlusion_color : Color = Color(0.17, 0.044, 0.027, 0.549)
 
 @export_subgroup("Structure")
-@export_range(0, 1) var accumulation_decay : float = 0.8
+@export_range(0, 1) var accumulation_decay : float = 0.5
 @export_range(100, 1000000) var extra_large_noise_scale : float = 320000.0
-@export_range(100, 500000) var large_noise_scale : float = 125253.0
-@export_range(100, 100000) var medium_noise_scale : float = 10296.0
-@export_range(100, 10000) var small_noise_scale : float = 7024.0
-@export_range(0, 2) var clouds_sharpness : float = 0.5
-@export_range(0, 3) var clouds_detail_strength : float = 0.93
-@export_range(0, 50000) var curl_noise_strength : float = 15752.0
-@export_range(0, 2) var lighting_sharpness : float = 0.07
+@export_range(100, 500000) var large_noise_scale : float = 50000.0
+@export_range(100, 100000) var medium_noise_scale : float = 6000.0
+@export_range(100, 10000) var small_noise_scale : float = 2500.0
+@export_range(0, 2) var clouds_sharpness : float = 1.0
+@export_range(0, 3) var clouds_detail_strength : float = 0.9
+@export_range(0, 50000) var curl_noise_strength : float = 5000.0
+@export_range(0, 2) var lighting_sharpness : float = 0.05
 
 @export var cloud_floor : float = 1500.0
-@export var cloud_ceiling : float = 15000.0
+@export var cloud_ceiling : float = 25000.0
 
 @export_subgroup("Performance")
-@export var max_step_count : float = 200.0
+@export var max_step_count : float = 50
 @export var max_lighting_steps : float = 32
-@export_enum("Native","Quarter","Eighth","Sixteenth") var resolution_scale = 1:
+@export_enum("Native","Quarter","Eighth","Sixteenth") var resolution_scale = 0:
 	get:
 		return resolution_scale
 	set(value):
@@ -57,13 +57,13 @@ class_name SunshineCloudsGD
 @export_group("Advanced Settings")
 @export_subgroup("Visuals")
 @export_range(0, 1000) var dither_speed : float = 100.8254
-@export_range(0, 20) var blur_power : float = 1.0
+@export_range(0, 20) var blur_power : float = 2.0
 @export_range(0, 6) var blur_quality : float = 1.0
 
 @export_subgroup("Performance")
 @export var min_step_distance : float = 100.0
 @export var max_step_distance : float = 600.0
-@export var lighting_travel_distance : float = 15000.0
+@export var lighting_travel_distance : float = 5000.0
 
 @export_subgroup("Mask")
 @export var extra_large_used_as_mask : bool = false
@@ -140,7 +140,7 @@ func update_mask(newMask : RID):
 	last_size = Vector2i.ZERO
 
 func _init():
-	effect_callback_type = CompositorEffect.EFFECT_CALLBACK_TYPE_POST_SKY
+	effect_callback_type = CompositorEffect.EFFECT_CALLBACK_TYPE_PRE_TRANSPARENT
 	access_resolved_depth = true
 	access_resolved_color = true
 	needs_motion_vectors = true
@@ -287,6 +287,7 @@ func initialize_compute():
 		printerr("Post pass Shader failed to compile.")
 		clear_compute()
 		return
+
 func _render_callback(effect_callback_type, render_data):
 	if rd == null:
 		initialize_compute()
@@ -338,17 +339,20 @@ func _render_callback(effect_callback_type, render_data):
 					var color_image : RID = buffers.get_color_layer(view)
 					var depth_image : RID = buffers.get_depth_layer(view)
 					
+					var blankImageData : PackedByteArray = []
+					blankImageData.resize(new_size.x * new_size.y * 4 * 4)
+					
 					var base_colorformat : RDTextureFormat = rd.texture_get_format(color_image)
 					base_colorformat.format = RenderingDevice.DATA_FORMAT_R32G32B32A32_SFLOAT
 					base_colorformat.width = new_size.x
 					base_colorformat.height = new_size.y
 					
-					accumulation_textures.append(rd.texture_create(base_colorformat, RDTextureView.new(), []))
-					accumulation_textures.append(rd.texture_create(base_colorformat, RDTextureView.new(), []))
-					accumulation_textures.append(rd.texture_create(base_colorformat, RDTextureView.new(), []))
-					accumulation_textures.append(rd.texture_create(base_colorformat, RDTextureView.new(), []))
-					accumulation_textures.append(rd.texture_create(base_colorformat, RDTextureView.new(), []))
-					accumulation_textures.append(rd.texture_create(base_colorformat, RDTextureView.new(), []))
+					accumulation_textures.append(rd.texture_create(base_colorformat, RDTextureView.new(), [blankImageData]))
+					accumulation_textures.append(rd.texture_create(base_colorformat, RDTextureView.new(), [blankImageData]))
+					accumulation_textures.append(rd.texture_create(base_colorformat, RDTextureView.new(), [blankImageData]))
+					accumulation_textures.append(rd.texture_create(base_colorformat, RDTextureView.new(), [blankImageData]))
+					accumulation_textures.append(rd.texture_create(base_colorformat, RDTextureView.new(), [blankImageData]))
+					accumulation_textures.append(rd.texture_create(base_colorformat, RDTextureView.new(), [blankImageData]))
 					
 					
 					var depthformat : RDTextureFormat = rd.texture_get_format(depth_image)
@@ -595,7 +599,7 @@ func update_matrices(camera_tr, view_proj):
 	
 	var idx = 0
 	filter_index += 1
-	if filter_index >= 16:
+	if filter_index > 16:
 		filter_index = 0
 		# Camera matrix (16 floats)
 	general_data.encode_float(idx, camera_tr.basis.x.x); idx += 4

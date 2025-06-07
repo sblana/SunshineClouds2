@@ -11,5 +11,5 @@ height = 128
 depth = 128
 invert = true
 seamless = true
-seamless_blend_skirt = 0.48
+seamless_blend_skirt = 0.487
 noise = SubResource("FastNoiseLite_o0m1u")

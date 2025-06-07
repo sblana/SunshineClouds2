@@ -80,81 +80,10 @@ layout(push_constant, std430) uniform Params {
     float reserved;
 } params;
 
-
+// Helpers
 float remap(float value, float min1, float max1, float min2, float max2) {
   return min2 + (value - min1) * (max2 - min2) / (max1 - min1);
 }
-
-// vec4 blur5(sampler2D image, vec2 uv, vec2 resolution, vec2 direction) {
-//     vec4 color = vec4(0.0);
-//     vec2 off1 = vec2(1.3333333333333333) * direction;
-//     color += texture(image, uv) * 0.29411764705882354;
-//     color += texture(image, uv + (off1 / resolution)) * 0.35294117647058826;
-//     color += texture(image, uv - (off1 / resolution)) * 0.35294117647058826;
-//     return color; 
-// }
-
-// vec4 blur13(sampler2D image, vec2 uv, vec2 resolution, vec2 direction) {
-//     vec4 color = vec4(0.0);
-//     vec2 off1 = vec2(1.411764705882353) * direction;
-//     vec2 off2 = vec2(3.2941176470588234) * direction;
-//     vec2 off3 = vec2(5.176470588235294) * direction;
-//     color += texture(image, uv) * 0.1964825501511404;
-//     color += texture(image, uv + (off1 / resolution)) * 0.2969069646728344;
-//     color += texture(image, uv - (off1 / resolution)) * 0.2969069646728344;
-//     color += texture(image, uv + (off2 / resolution)) * 0.09447039785044732;
-//     color += texture(image, uv - (off2 / resolution)) * 0.09447039785044732;
-//     color += texture(image, uv + (off3 / resolution)) * 0.010381362401148057;
-//     color += texture(image, uv - (off3 / resolution)) * 0.010381362401148057;
-//     return color;
-// }
-
-// vec4 blur(sampler2D image, vec2 uv, float blurSize){
-//     vec4 texColor = vec4(0.0); // texture2D(u_texture, vTexCoord)
-//     texColor += texture(image, uv - 4.0*blurSize) * 0.05;
-//     texColor += texture(image, uv - 3.0*blurSize) * 0.09;
-//     texColor += texture(image, uv - 2.0*blurSize) * 0.12;
-//     texColor += texture(image, uv - blurSize) * 0.15;
-//     texColor += texture(image, uv) * 0.16;
-//     texColor += texture(image, uv + blurSize) * 0.15;
-//     texColor += texture(image, uv + 2.0*blurSize) * 0.12;
-//     texColor += texture(image, uv + 3.0*blurSize) * 0.09;
-//     texColor += texture(image, uv + 4.0*blurSize) * 0.05;
-//     return texColor;
-// }
-
-// vec4 gaussianBlur(sampler2D txr, vec2 pos, float xs, float ys, float r){
-// 	float x,y,xx,yy,rr=r*r,dx,dy,w,w0;
-//     w0=0.3780/pow(r,1.975);
-//     vec2 p;
-//     vec4 col=vec4(0.0,0.0,0.0,0.0);
-//     for (dx=1.0/xs,x=-r,p.x=0.5+(pos.x*0.5)+(x*dx);x<=r;x++,p.x+=dx){ xx=x*x;
-//      for (dy=1.0/ys,y=-r,p.y=0.5+(pos.y*0.5)+(y*dy);y<=r;y++,p.y+=dy){ yy=y*y;
-//       if (xx+yy<=rr)
-//         {
-//         w=w0*exp((-xx-yy)/(2.0*rr));
-//         col+=texture(txr,p)*w;
-//         }}}
-//     return col;
-// }
-// vec4 gaussianBlur(sampler2D image, vec2 uv, float Directions, float blurVertical, float blurHorizontal) {
-//     float angleStep = 6.28318530718 / float(Directions); // Full circle divided by `directions`
-//     float kernel[5] = float[](0.06, 0.12, 0.15, 0.12, 0.06);
-//     vec4 color = texture(imageTexture, uv) * kernel[2]; // Center sample
-
-//     for (int i = -2; i <= 2; i++) {
-//         if (i != 0) {
-//             for (int j = 0; j < Directions; j++) {
-//                 float angle = angleStep * float(j);
-//                 vec2 offset = vec2(cos(angle) * blurHorizontal, sin(angle) * blurVertical);
-//                 color.rgb += texture(imageTexture, uv + offset).rgb * kernel[i + 2];
-//                 color.rgb += texture(imageTexture, uv - offset).rgb * kernel[i + 2];
-//             }
-//         }
-//     }
-
-//     return color;
-// }
 
 float w0(float a)
 {
@@ -198,6 +127,8 @@ float h1(float a)
     return 1.0 + w3(a) / (w2(a) + w3(a));
 }
 
+// Sampling
+
 vec4 texture2D_bicubic(sampler2D tex, vec2 uv, vec2 res)
 {
 	uv = uv*res + 0.5;
@@ -225,12 +156,11 @@ vec4 texture2D_bicubic(sampler2D tex, vec2 uv, vec2 res)
 vec4 radialBlurData(vec4 startColor, float linear_depth, sampler2D image, vec2 uv, float Directions, float blurVertical, float blurHorizontal, float Quality){
     float Pi = 6.28318530718;
     float count = 1.0;
-	float theoreticalMaxCount =  Directions * Quality;
-	float stepLerp = 1.0 / theoreticalMaxCount;
+	//float theoreticalMaxCount =  Directions * Quality;
+	//float stepLerp = 1.0 / theoreticalMaxCount;
     vec4 Color = startColor;
-	float originalDepth = Color.r;
-	bool isNear = originalDepth < linear_depth;
-	vec4 sampled = vec4(0.0);
+	//float originalDepth = Color.r;
+	//bool isNear = originalDepth < linear_depth;
 
 	//float meanDistancesFar = 0.0;
     for( float d=0.0; d<Pi; d+=Pi/Directions)
@@ -258,13 +188,6 @@ vec4 radialBlurData(vec4 startColor, float linear_depth, sampler2D image, vec2 u
 			//count += 1.0;
         }
     }
-	// if (meanDistancesFar > 0.0){
-	// 	Color.r = maxDistance;
-	// }
-	// else{
-	// 	Color.r = minDistance;
-	// }
-	//Color.rgb /= count;
     return Color;
 }
 
@@ -272,7 +195,7 @@ vec4 radialBlurColor(vec4 startColor, sampler2D image, vec2 uv, vec2 size, float
     float Pi = 6.28318530718;
     float count = 1.0;
 	float theoreticalMaxCount =  Directions * Quality;
-	float stepLerp = 1.0 / theoreticalMaxCount;
+	//float stepLerp = 1.0 / theoreticalMaxCount;
     vec4 Color = startColor;
     for( float d=0.0; d<Pi; d+=Pi/Directions)
     {
@@ -347,12 +270,6 @@ vec4 sampleAllAtmospherics(
     float pRlh = 3.0 / (16.0 * PI) * (1.0 + mumu);
     float pMie = 3.0 / (8.0 * PI) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * MieprefferedDirection, 1.5) * (2.0 + gg));
 
-	//Sample all atmospherics
-	// if (density >= 1.0){
-	// 	finaldepth = min(maxDistance, highestDensityDistance);
-	// }
-	//float stepCount = max(floor(maxDistance / stepDistance), 1.0);
-
 	vec3 curPos = vec3(0.0);
 	float traveledDistance = 0.0;
 	//bool sampledDistanceAtmo = false;
@@ -389,13 +306,8 @@ void main() {
     ivec2 uv = ivec2(gl_GlobalInvocationID.xy);
     ivec2 lowres_size = ivec2(params.input_size);
 
-    
-
     int resolutionScale = int(params.resolutionscale);
-    //uv -= ivec2(resolutionScale);
     ivec2 size = lowres_size * resolutionScale;
-
-	
 
     vec2 depthUV = vec2(float(uv.x) / float(size.x), float(uv.y) / float(size.y));
 	depthUV = clamp(depthUV, vec2(0.0), vec2(1.0));
@@ -419,9 +331,6 @@ void main() {
 	vec3 rayOrigin = genericData.view[3].xyz; //center of camera for the ray origin, not worried about the screen width playing in, as it's for clouds.
 
 
-
-    //vec2 sampleUV = vec2(float(uv.x) / float(size.x), float(uv.y) / float(size.y));
-	
 	ivec2 tempuv = uv + ivec2(resolutionScale);
 	vec2 accumUV = vec2(float(tempuv.x) / float(size.x), float(tempuv.y) / float(size.y));
 	accumUV = clamp(accumUV, vec2(0.0), vec2(1.0));
@@ -451,18 +360,13 @@ void main() {
 		float blurQuality = genericData.blurQuality;
 		currentAccumilation = radialBlurColor(currentAccumilation, input_color_image, accumUV, lowres_sizefloat, blurQuality * 4.0, blurVertical, blurHorizontal, blurQuality);
 		currentColorData = radialBlurData(currentColorData, linear_depth, input_data_image, accumUV, blurQuality * 4.0, blurVertical, blurHorizontal, blurQuality);
-		//currentAccumilation = gaussianBlur(input_image, accumUV, float(size.x), float(size.y), blurPower);
 	}
 
 
     float density = clamp(currentAccumilation.a, 0.0, 1.0);
-    //float lightingWeight = clamp(currentAccumilation.g, 0.0, 1.0);
     float traveledDistance = currentColorData.g;
 	float firstTraveledDistance = currentColorData.b;
-	//float ambient = currentAccumilation.a;
-	
-	//float hardDensityCutoff = clamp(smoothstep(0.0, maxstep, linear_depth), 0.0, 1.0);
-	//density *= hardDensityCutoff;
+
 	
 	if (traveledDistance > linear_depth){
 		if (firstTraveledDistance < linear_depth){
@@ -475,20 +379,6 @@ void main() {
 		}
 		traveledDistance = linear_depth;
 	}
-	// else{
-	// 	float hardDensityCutoff = clamp(smoothstep(0.0, maxstep, linear_depth), 0.0, 1.0);
-	// 	density *= hardDensityCutoff;
-	// }
-	// if (currentColorData.b > 0.0){
-	// 	if (traveledDistance > linear_depth){ //causes jitter over terrain.
-	// 		density = 0.0;
-	// 		traveledDistance = linear_depth;
-	// 	}
-	// 	else{
-	// 		hardDensityCutoff = clamp(remap(linear_depth - traveledDistance, 0.0, minstep, 0.0, 1.0), 0.0, 1.0);
-	// 		density *= hardDensityCutoff;
-	// 	}
-	// }
 
 	
 	float groundLinearFade = mix(smoothstep(maxTheoreticalStep, maxTheoreticalStep, linear_depth), 1.0, genericData.fogEffectGround);

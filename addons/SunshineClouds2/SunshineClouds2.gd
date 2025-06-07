@@ -4,7 +4,7 @@ extends EditorPlugin
 var dock : CloudsEditorController
 
 func _handles(object: Object) -> bool:
-	return true
+	return object is SunshineCloudsDriverGD
 
 func _forward_3d_gui_input(viewport_camera: Camera3D, event: InputEvent) -> int:
 	if dock.currentDrawMode == CloudsEditorController.DRAWINGMODE.none:
@@ -46,6 +46,7 @@ func _enter_tree() -> void:
 	add_control_to_dock(DOCK_SLOT_LEFT_UR, dock)
 	
 	scene_changed.connect(dock.SceneChanged)
+	
 	
 	var editorInterface = get_editor_interface()
 	var sceneRoot = editorInterface.get_edited_scene_root()
