@@ -31,6 +31,9 @@ Rebuilt from the ground up to use the compositor system, improving performance a
 ## Contribution
 Feel free to make pr's or issues here, I will fix them as able, I will love to see whatever you all come up with!
 
+If you wish to support me directly you can do so over on Patreon: [https://www.patreon.com/c/Bonkahe](https://www.patreon.com/c/Bonkahe)
+Thank you so much to all the wonderful people who support me.
+
 ### Current outstanding issues
 * Need to implement screen space shadows
 * When shadow cookies are available (A pr is currently live with someone working on this in the Godot repo, I will pursue this whenever they get it merged)
