@@ -25,7 +25,7 @@ void main() {
 
     vec2 depthUV = vec2(0.0);
 
-    float furthestDepth = 1.0;
+    float furthestDepth = 10000000000000000.0;
     for (int x = 0; x < adjustedScale; x++) {
         for(int y = 0; y < adjustedScale; y++) {
             current_uv = starting_uv + ivec2(x, y);

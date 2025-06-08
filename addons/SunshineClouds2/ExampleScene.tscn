@@ -13,7 +13,7 @@ sky_material = SubResource("ProceduralSkyMaterial_afwv5")
 [sub_resource type="Environment" id="Environment_nuogy"]
 background_mode = 2
 sky = SubResource("Sky_unbdf")
-tonemap_mode = 2
+tonemap_mode = 4
 glow_enabled = true
 
 [sub_resource type="Compositor" id="Compositor_ftegy"]
@@ -43,7 +43,7 @@ size = Vector2(10, 10)
 [node name="ExampleScene" type="Node3D"]
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(-0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, 0.75, -0.433013, -8, 2, -2)
+transform = Transform3D(-0.866025, -0.43834683, 0.24052516, -2.9802322e-08, 0.4810502, 0.8766926, -0.5, 0.7592384, -0.4166019, -8, 2, -2)
 shadow_enabled = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
@@ -57,10 +57,10 @@ clouds_resource = ExtResource("1_o8tia")
 ambience_sample_environment = SubResource("Environment_mtpi3")
 tracked_directional_lights = [NodePath("../DirectionalLight3D")]
 tracked_directional_light_shadow_steps = Array[int]([32])
-extra_large_clouds_pos = Vector3(-56648.19, 0, -56648.19)
-large_clouds_pos = Vector3(-37109.22, 0, -37109.22)
-medium_clouds_pos = Vector3(-5065.0083, 0, -5065.0083)
-small_clouds_pos = Vector3(-1010.22107, 1010.22107, -1010.22107)
+extra_large_clouds_pos = Vector3(93112.88, 0, 93112.88)
+large_clouds_pos = Vector3(5473.277, 0, 5473.277)
+medium_clouds_pos = Vector3(7494.8496, 0, 7494.8496)
+small_clouds_pos = Vector3(-2436.6619, 2436.6619, -2436.6619)
 metadata/_custom_type_script = "uid://djusduuxf0voj"
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]

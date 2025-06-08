@@ -36,7 +36,7 @@ class_name SunshineCloudsGD
 @export_subgroup("Performance")
 @export var max_step_count : float = 50
 @export var max_lighting_steps : float = 32
-@export_enum("Native","Quarter","Eighth","Sixteenth") var resolution_scale = 0:
+@export_enum("Native","Half","Quarter","Eighth") var resolution_scale = 0:
 	get:
 		return resolution_scale
 	set(value):

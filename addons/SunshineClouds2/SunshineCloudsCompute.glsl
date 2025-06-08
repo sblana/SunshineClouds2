@@ -197,9 +197,9 @@ float sampleScene(
 	if (!ambientsample && curlHeightSample > 0.0 && min(curlPower, lod) > 0.5){
 		vec2 WindDirection = genericData.WindDirection;
 		float curlLod = remap(lod, 0.5, 1.0, 0.0, 1.0);
-		worldPosition += (((texture(curl_noise, (worldPosition - mediumNoisePos) / mediumnoisescale).xyz * 2.0) - 1.0) * vec3(1.0, 0.2, 1.0) + vec3(WindDirection.x, 0.0, WindDirection.y)) * curlPower * curlHeightSample * curlLod;
-		worldPosition += (((texture(curl_noise, (worldPosition - mediumNoisePos) / mediumnoisescale).xyz * 2.0) - 1.0) * vec3(1.0, 0.2, 1.0) + vec3(WindDirection.x, 0.0, WindDirection.y)) * curlPower * curlHeightSample * curlLod;
-		worldPosition += (((texture(curl_noise, (worldPosition - mediumNoisePos) / mediumnoisescale).xyz * 2.0) - 1.0) * vec3(1.0, 0.2, 1.0) + vec3(WindDirection.x, 0.0, WindDirection.y)) * curlPower * curlHeightSample * curlLod;
+		worldPosition += (((texture(curl_noise, (worldPosition - mediumNoisePos) / mediumnoisescale).xyz * 2.0) - 1.0) * vec3(1.0, 0.2, 1.0) + vec3(WindDirection.x, 0.0, WindDirection.y) * 0.9) * curlPower * curlHeightSample * curlLod;
+		worldPosition += (((texture(curl_noise, (worldPosition - mediumNoisePos) / mediumnoisescale).xyz * 2.0) - 1.0) * vec3(1.0, 0.2, 1.0) + vec3(WindDirection.x, 0.0, WindDirection.y) * 0.9) * curlPower * curlHeightSample * curlLod;
+		worldPosition += (((texture(curl_noise, (worldPosition - mediumNoisePos) / mediumnoisescale).xyz * 2.0) - 1.0) * vec3(1.0, 0.2, 1.0) + vec3(WindDirection.x, 0.0, WindDirection.y) * 0.9) * curlPower * curlHeightSample * curlLod;
 		
 		clampedWorldHeight = remap(worldPosition.y, cloudfloor, cloudceiling, 0.0, 1.0);
 		gradientSample = texture(heightmask, vec2(clampedWorldHeight, 0.5)).rgba;
@@ -207,9 +207,10 @@ float sampleScene(
 
 	float largeShape = texture(large_noise, (worldPosition - largeNoisePos) / largenoisescale).r * extraLargeShape;
 	largeShape = smoothstep(coverage , coverage - 0.1, 1.0 - (largeShape * gradientSample.r));
-	float mediumshape = texture(noise_medium, (worldPosition - mediumNoisePos) / mediumnoisescale).r;
+	vec4 mediumShapes = texture(noise_medium, (worldPosition - mediumNoisePos) / mediumnoisescale).rgba;
+	float mediumshape = 1.0 - mediumShapes.b;
 	smallShape = smallShape * gradientSample.g * pow((1.0 - mediumshape), smallscalePower);
-
+	
 
 	float shape = mediumshape;
 	shape = clamp(remap(shape, 1.0 - largeShape, 1.0, 0.0, 1.0), 0.0, 1.0);
@@ -242,7 +243,8 @@ float sampleLighting(
 	{
 	float density = 0.0;
 	float stepCountFloat = max(float(stepCount) * lod, 2.0);
-	float eachShortStep = stepDistance / (float(stepCount) / stepCountFloat) / stepCountFloat;
+	float actualDistance = mix(stepDistance * 4.0, stepDistance, lod);
+	float eachShortStep = actualDistance / (float(stepCount) / stepCountFloat) / stepCountFloat;
 	float traveledDistance = 0.0;
 	
 	float sunUpValue = 1.0 - sunUpWeight;
@@ -253,7 +255,7 @@ float sampleLighting(
 	float count = 0.0;
 	vec3 curPos = worldPosition;
 	for (float i = 0.0; i < stepCountFloat; i++) {
-		traveledDistance = mix(eachShortStep, stepDistance, clamp(quadraticOut(i / stepCountFloat), 0.0, 1.0));
+		traveledDistance = mix(eachShortStep, actualDistance, clamp(quadraticOut(i / stepCountFloat), 0.0, 1.0));
 		curPos = worldPosition + sunDirection * traveledDistance;
 
 		if (density < 1.0 && clamp(curPos.y, cloudfloor, cloudceiling) == curPos.y){
