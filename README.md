@@ -1,9 +1,15 @@
 <img src="https://github.com/Bonkahe/SunshineClouds2/blob/main/githubstuff/Logo.png?raw=true">
 
 # SunshineClouds
+30 Minute DeepDive: [https://youtu.be/hqhWR0CxZHA?si=deiHEKe2ezKc1ix4](https://youtu.be/hqhWR0CxZHA?si=deiHEKe2ezKc1ix4)
+
+## Videos:
+https://youtu.be/hqhWR0CxZHA
 
 ## Updates:
-version 2.0:
+2.1:
+Mostly bug fixes following asset release on the asset library
+2.0:
 Rebuilt from the ground up to use the compositor system, improving performance and visuals.
 
 ## Features
