@@ -75,6 +75,7 @@ class_name SunshineCloudsGD
 @export var post_pass_compute_shader : RDShaderFile
 
 @export_group("Internal Use")
+@export var origin_offset : Vector3 = Vector3.ZERO
 @export_subgroup("Positions")
 @export var wind_direction : Vector3 = Vector3.ZERO
 @export var extra_large_scale_clouds_position : Vector3 = Vector3.ZERO
@@ -696,9 +697,9 @@ func update_matrices(camera_tr, view_proj):
 	var width = mask_width_km * 1000.0
 	
 	if (extra_large_used_as_mask):
-		general_data.encode_float(idx, (width * 0.5) * -1.0); idx += 4
-		general_data.encode_float(idx, (width * 0.5) * -1.0); idx += 4
-		general_data.encode_float(idx, (width * 0.5) * -1.0); idx += 4
+		general_data.encode_float(idx, origin_offset.x + (width * 0.5) * -1.0); idx += 4
+		general_data.encode_float(idx, origin_offset.y + (width * 0.5) * -1.0); idx += 4
+		general_data.encode_float(idx, origin_offset.z + (width * 0.5) * -1.0); idx += 4
 		general_data.encode_float(idx, width); idx += 4
 	else:
 		general_data.encode_float(idx, extra_large_scale_clouds_position.x); idx += 4

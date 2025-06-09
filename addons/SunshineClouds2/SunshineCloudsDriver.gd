@@ -42,6 +42,7 @@ class_name SunshineCloudsDriverGD
 @export var directional_light_power_multiplier: float = 1.0
 @export var point_light_power_multiplier: float = 1.0
 @export_group("Wind Controls")
+@export var origin_offset : Vector3 = Vector3.ZERO
 @export var wind_direction: Vector3 = Vector3(1.0, 0.0, 1.0)
 @export var extra_large_structures_wind_speed: float = 140.0
 @export var large_structures_wind_speed: float = 100.0
@@ -82,10 +83,11 @@ func _process(delta : float):
 			small_clouds_pos += (-wind_direction + Vector3.UP).normalized() * small_structures_wind_speed * delta
 			small_clouds_pos = wrap_vector(small_clouds_pos, _small_clouds_domain)
 			
-			clouds_resource.extra_large_scale_clouds_position = extra_large_clouds_pos
-			clouds_resource.large_scale_clouds_position = large_clouds_pos
-			clouds_resource.medium_scale_clouds_position = medium_clouds_pos
-			clouds_resource.detail_clouds_position = small_clouds_pos
+			clouds_resource.origin_offset = origin_offset
+			clouds_resource.extra_large_scale_clouds_position = origin_offset + extra_large_clouds_pos
+			clouds_resource.large_scale_clouds_position = origin_offset + large_clouds_pos
+			clouds_resource.medium_scale_clouds_position = origin_offset + medium_clouds_pos
+			clouds_resource.detail_clouds_position = origin_offset + small_clouds_pos
 			
 			clouds_resource.wind_direction = wind_direction
 			
