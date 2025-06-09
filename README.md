@@ -7,10 +7,10 @@
 https://youtu.be/hqhWR0CxZHA
 
 ## Updates:
-2.1:
-Mostly bug fixes following asset release on the asset library
-2.0:
-Rebuilt from the ground up to use the compositor system, improving performance and visuals.
+
+2.1: Mostly bug fixes following asset release on the asset library
+
+2.0: Rebuilt from the ground up to use the compositor system, improving performance and visuals.
 
 ## Features
 * Fully volumetric clouds, extendable as far from the camera as you want with the correct settings
