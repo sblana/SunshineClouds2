@@ -27,6 +27,8 @@ Rebuilt from the ground up to use the compositor system, improving performance a
 (Terrain not included, that comes later xD )
 <img src="https://github.com/Bonkahe/SunshineClouds2/blob/main/githubstuff/PreviewGif_Environment.gif">
 <img src="https://github.com/Bonkahe/SunshineClouds2/blob/main/githubstuff/PreviewGif_Tools.gif">
+<img src="https://github.com/Bonkahe/SunshineClouds2/blob/main/githubstuff/ScreenShot1.png">
+<img src="https://github.com/Bonkahe/SunshineClouds2/blob/main/githubstuff/ScreenShot2.png">
 
 ## Contribution
 Feel free to make pr's or issues here, I will fix them as able, I will love to see whatever you all come up with!
