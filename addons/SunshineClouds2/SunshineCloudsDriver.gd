@@ -11,6 +11,8 @@ class_name SunshineCloudsDriverGD
 		retrieve_texture_data()
 
 @export_tool_button("Generate Clouds Resource", "Add") var generate_action = build_new_clouds
+@export_tool_button("Test Clouds Position Sample", "Add") var position_sample = sample_clouds
+
 
 @export_group("Compositor Resource")
 @export var clouds_resource: SunshineCloudsGD
@@ -116,6 +118,14 @@ func _process(delta : float):
 					return
 	else:
 		update_continuously = false
+
+func sample_clouds():
+	for i in range(64):
+		clouds_resource.add_sample(return_data.bind(), Vector3(i * 1000, 6000.0, 0.0))
+
+func return_data(position : Vector3, sampledensity : float):
+	print(position, " ", sampledensity)
+	pass
 
 func build_new_clouds():
 	if (is_inside_tree()):

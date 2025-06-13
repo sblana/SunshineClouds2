@@ -68,7 +68,7 @@ layout(binding = 14) uniform uniformBuffer {
 
 	vec2 WindDirection;
 	float fogEffectGround;
-	float reserved;
+	float samplePointsCount;
 } genericData;
 
 struct DirectionalLight {
@@ -81,9 +81,13 @@ struct PointLight {
 	vec4 color; //a = intensity
 };
 
-layout(binding = 15) uniform lightsBuffer {
+layout(binding = 15) uniform LightsBuffer {
 	DirectionalLight directionalLights[4];
-	PointLight pointLights[8];
+	PointLight pointLights[128];
+};
+
+layout(binding = 16, std430) restrict buffer SamplePointsBuffer {
+	vec4 SamplePoints[32];
 };
 
 // Our push constant
@@ -551,6 +555,9 @@ void main() {
 		}
 	}
 	
+
+	
+	
 	vec4 lightColor = vec4(0.0);
 	vec3 paintedColor = vec3(0.0);
 	float initialdistanceSample = -1.0;
@@ -561,9 +568,20 @@ void main() {
 	float ambient = 0.0;
 	float depthFade = 1.0;
 	float newdensity = 0.0;
+	vec3 curPos = vec3(0.0);
 	
-	vec3 curPos = rayOrigin;
 	float curLod = 1.0;
+	float samplePosCount = genericData.samplePointsCount;
+
+	if (samplePosCount > 0 && uv == ivec2(0)){
+		for (int i = 0; i < samplePosCount; i++){
+			curPos = SamplePoints[i].xyz;
+			vec4 maskSample = texture(extra_large_noise, (curPos.xz - extralargeNoisePos.xz) / extralargenoiseScale);
+			ceilingSample = mix(halfCeiling, cloudceiling, maskSample.a);
+			
+			SamplePoints[i].w = pow(sampleScene(largeNoisePos, mediumNoisePos, smallNoisePos, curPos, ceilingSample, cloudfloor, maskSample.a, largenoiseScale, mediumnoiseScale, smallnoiseScale, coverage, smallNoiseMultiplier, curlPower, 1.0, false) * densityMultiplier, sharpness);
+		}
+	}
 
 	for (int i = 0; i < stepCount; i++) {
 		
@@ -623,9 +641,10 @@ void main() {
 					float lightDistanceWeight = length(lightToOriginDelta); 
 					if (pointLights[lightI].color.a > 0.0 && lightDistanceWeight < pointLights[lightI].position.w){
 						lightToOriginDelta = normalize(lightToOriginDelta);
-						float densitySample = sampleLighting(3, curPos, extralargeNoisePos, largeNoisePos, mediumNoisePos, smallNoisePos, lightToOriginDelta, densityMultiplier, 1.0, min(maxstep, lightDistanceWeight), ceilingSample, cloudfloor, extralargenoiseScale, largenoiseScale, mediumnoiseScale, smallnoiseScale, coverage, smallNoiseMultiplier, curlPower, curLod);
+						float densitySample = 1.0 - newdensity;
+						//float densitySample = sampleLighting(3, curPos, extralargeNoisePos, largeNoisePos, mediumNoisePos, smallNoisePos, lightToOriginDelta, densityMultiplier, 1.0, min(maxstep, lightDistanceWeight), ceilingSample, cloudfloor, extralargenoiseScale, largenoiseScale, mediumnoiseScale, smallnoiseScale, coverage, smallNoiseMultiplier, curlPower, curLod);
 						
-						float henyeygreenstein = pow(HenyeyGreenstein(genericData.anisotropy, dot(directionalLights[lightI].direction.xyz, raydirection)), mix(1.0, 2.0, 1.0 - genericData.anisotropy)); 
+						float henyeygreenstein = pow(HenyeyGreenstein(genericData.anisotropy, dot(lightToOriginDelta, raydirection)), mix(1.0, 2.0, 1.0 - genericData.anisotropy)); 
 						densitySample = BeersLaw(lightDistanceWeight, densitySample * henyeygreenstein);
 						densitySample = mix(densitySample, newdensity, 0.3);
 						lightDistanceWeight = lightDistanceWeight / pointLights[lightI].position.w;
