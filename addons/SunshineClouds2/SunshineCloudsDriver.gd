@@ -11,7 +11,7 @@ class_name SunshineCloudsDriverGD
 		retrieve_texture_data()
 
 @export_tool_button("Generate Clouds Resource", "Add") var generate_action = build_new_clouds
-@export_tool_button("Test Clouds Position Sample", "Add") var position_sample = sample_clouds
+#@export_tool_button("Test Clouds Position Sample", "Add") var position_sample = sample_clouds
 
 
 @export_group("Compositor Resource")
