@@ -94,6 +94,7 @@ class_name SunshineCloudsGD
 var positionQueries : Array[Vector3] = []
 var positionQueryCallables : Array[Callable] = []
 var positionQuerying : bool = false
+var positionResetting : bool = false
 
 var lights_updated = false
 
@@ -148,9 +149,9 @@ func update_mask(newMask : RID):
 	last_size = Vector2i.ZERO
 
 func add_sample(callable : Callable, position : Vector3):
-	if (positionQueries.size() == 32):
-		print("Max cloud position sample queue reached (32), query failed.")
-		return
+	#if (positionQueries.size() == 32):
+		#print("Max cloud position sample queue reached (32), query failed.")
+		#return
 	positionQueries.append(position)
 	positionQueryCallables.append(callable)
 
@@ -607,7 +608,7 @@ func _render_callback(effect_callback_type, render_data):
 			if lights_updated or directional_lights_data.size() == 0:
 				update_lights()
 			
-			if (!positionQuerying && positionQueries.size() > 0):
+			if (!positionQuerying && !positionResetting && positionQueries.size() > 0):
 				encode_sample_points()
 			
 			var prepass_x_groups = ((size.x - 1) / 32) + 1
@@ -637,7 +638,8 @@ func _render_callback(effect_callback_type, render_data):
 				rd.compute_list_dispatch(postpass_list, prepass_x_groups, prepass_y_groups, 1)
 				rd.compute_list_end()
 			
-			if (positionQuerying):
+			if (!positionResetting && positionQuerying):
+				positionResetting = true
 				rd.buffer_get_data_async(point_sample_data_buffer, retrieve_position_queries.bind())
 			#call_deferred("update_callbacktype", cameraTR.origin.y)
 			#if (cameraTR.origin.y > cloud_floor):
@@ -648,6 +650,7 @@ func _render_callback(effect_callback_type, render_data):
 					#self.effect_callback_type = CompositorEffect.EFFECT_CALLBACK_TYPE_PRE_TRANSPARENT
 
 func retrieve_position_queries(data : PackedByteArray):
+	
 	var idx = 0
 	while idx < 512 && positionQueryCallables.size() > 0:
 		var position : Vector3 = Vector3.ZERO
@@ -665,6 +668,7 @@ func retrieve_position_queries(data : PackedByteArray):
 		
 	
 	positionQuerying = false
+	positionResetting = false
 
 
 func update_callbacktype(lastY : float):
