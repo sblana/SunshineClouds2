@@ -90,6 +90,7 @@ class_name SunshineCloudsGD
 @export_subgroup("Lights")
 @export var directional_lights_data : Array[Vector4] = []
 @export var point_lights_data : Array[Vector4] = []
+@export var point_effector_data : Array[Vector4] = []
 
 var positionQueries : Array[Vector3] = []
 var positionQueryCallables : Array[Callable] = []
@@ -128,7 +129,6 @@ var buffers : RenderSceneBuffersRD
 
 
 var uniform_sets : Array[RID] = []
-var general_data_floats : PackedFloat32Array = []
 var general_data : PackedByteArray
 
 var light_data : PackedByteArray
@@ -495,14 +495,14 @@ func _render_callback(effect_callback_type, render_data):
 					height_gradient_uniform.add_id(RenderingServer.texture_get_rd_texture(height_gradient.get_rid()))
 					uniforms_array.append(height_gradient_uniform)
 					
-					general_data_buffer = rd.uniform_buffer_create(448)
+					general_data_buffer = rd.uniform_buffer_create(464)
 					var camera_uniform = RDUniform.new()
 					camera_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_UNIFORM_BUFFER
 					camera_uniform.binding = 14
 					camera_uniform.add_id(general_data_buffer)
 					uniforms_array.append(camera_uniform)
 					
-					light_data_buffer = rd.uniform_buffer_create(4224)
+					light_data_buffer = rd.uniform_buffer_create(4352)
 					var light_data_uniform = RDUniform.new()
 					light_data_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_UNIFORM_BUFFER
 					light_data_uniform.binding = 15
@@ -680,10 +680,8 @@ func update_callbacktype(lastY : float):
 			self.effect_callback_type = CompositorEffect.EFFECT_CALLBACK_TYPE_PRE_TRANSPARENT
 
 func update_matrices(camera_tr, view_proj):
-	if general_data_floats.size() != 112: #32 + 32 (matricies) + 44 for generic data.
-		general_data_floats.resize(112)
-	if general_data.size() != 448: #32+32+44 * 4 bytes for each float = 432.
-		general_data.resize(448)
+	if general_data.size() != 464: #32+32+44 * 4 bytes for each float = 432.
+		general_data.resize(464)
 	
 	var idx = 0
 	filter_index += 1
@@ -836,7 +834,7 @@ func update_matrices(camera_tr, view_proj):
 
 	general_data.encode_float(idx, clouds_sharpness); idx += 4
 	general_data.encode_float(idx, float(directional_lights_data.size()) / 2.0); idx += 4
-	general_data.encode_float(idx, float(point_lights_data.size()) / 2.0); idx += 4
+	general_data.encode_float(idx, 0.0); idx += 4
 	general_data.encode_float(idx, clouds_anisotropy); idx += 4
 
 	general_data.encode_float(idx, cloud_floor); idx += 4
@@ -854,6 +852,11 @@ func update_matrices(camera_tr, view_proj):
 	general_data.encode_float(idx, fog_effect_ground); idx += 4
 	general_data.encode_float(idx, positionQueries.size()); idx += 4
 	
+	general_data.encode_float(idx, float(point_lights_data.size()) / 2.0); idx += 4
+	general_data.encode_float(idx, float(point_effector_data.size()) / 2.0); idx += 4
+	general_data.encode_float(idx, 0.0); idx += 4
+	general_data.encode_float(idx, 0.0); idx += 4
+	
 	# Copy to byte buffer
 	rd.buffer_update(general_data_buffer, 0, general_data.size(), general_data)
 
@@ -861,16 +864,15 @@ func update_matrices(camera_tr, view_proj):
 func update_lights():
 	lights_updated = false
 	
-	if light_data.size() != 4224: #32 + 1024 * 4 bytes for each float = 4224.
-		light_data.resize(4224)
+	if light_data.size() != 4352: #32 + 1024 + 32 * 4 bytes for each float = 4352.
+		light_data.resize(4352)
 	
 	if (directional_lights_data.size() == 0): #defaults to having a default light.
 		directional_lights_data.append(Vector4(0.5, 1.0, 0.5, 16.0))
 		directional_lights_data.append(Vector4(1.0, 1.0, 1.0, 1.0))
 	
 	var idx = 0
-	var directional_light_count = min(directional_lights_data.size(), 8)
-	for i in range(directional_light_count):
+	for i in range(min(directional_lights_data.size(), 8)):
 		light_data.encode_float(idx, directional_lights_data[i].x)
 		idx += 4
 		light_data.encode_float(idx, directional_lights_data[i].y)
@@ -881,8 +883,8 @@ func update_lights():
 		idx += 4
 	
 	
-	idx = 128 * 4
-	for i in range(min(point_lights_data.size(), 64)):
+	idx = 128
+	for i in range(min(point_lights_data.size(), 256)):
 		light_data.encode_float(idx, point_lights_data[i].x)
 		idx += 4
 		light_data.encode_float(idx, point_lights_data[i].y)
@@ -890,6 +892,17 @@ func update_lights():
 		light_data.encode_float(idx, point_lights_data[i].z)
 		idx += 4
 		light_data.encode_float(idx, point_lights_data[i].w)
+		idx += 4
+	
+	idx = 4224
+	for i in range(min(point_effector_data.size(), 8)):
+		light_data.encode_float(idx, point_effector_data[i].x)
+		idx += 4
+		light_data.encode_float(idx, point_effector_data[i].y)
+		idx += 4
+		light_data.encode_float(idx, point_effector_data[i].z)
+		idx += 4
+		light_data.encode_float(idx, point_effector_data[i].w)
 		idx += 4
 	
 	rd.buffer_update(light_data_buffer, 0, light_data.size(), light_data)

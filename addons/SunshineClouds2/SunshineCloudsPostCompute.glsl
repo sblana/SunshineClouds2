@@ -40,7 +40,7 @@ layout(binding = 5) uniform uniformBuffer {
 
 	float cloud_sharpness;
 	float directionalLightsCount;
-	float pointLightsCount;
+	float reserveda;
 	float anisotropy;
 
 	float cloud_floor;
@@ -55,7 +55,11 @@ layout(binding = 5) uniform uniformBuffer {
 
 	vec2 WindDirection;
 	float fogEffectGround;
-	float reserved;
+	float samplePointsCount;
+
+	float pointLightsCount;
+	float pointEffectorCount;
+	vec2 reservedb;
 } genericData;
 
 
@@ -69,9 +73,19 @@ struct PointLight {
 	vec4 color; //a = intensity
 };
 
-layout(binding = 6) uniform lightsBuffer {
+struct PointEffector {
+	vec3 position; //w = radius
+	float radius;
+
+	float power;
+	float attenuation;
+	vec2 reserved;
+};
+
+layout(binding = 6) uniform LightsBuffer {
 	DirectionalLight directionalLights[4];
-	PointLight pointLights[32];
+	PointLight pointLights[128];
+	PointEffector pointEffectors[4];
 };
 
 // Our push constant

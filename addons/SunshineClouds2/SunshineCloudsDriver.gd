@@ -41,6 +41,13 @@ class_name SunshineCloudsDriverGD
 		tracked_point_lights = value
 		retrieve_texture_data()
 
+@export var tracked_point_effectors: Array[SunshineCloudsEffector] = []:
+	get:
+		return tracked_point_effectors
+	set(value):
+		tracked_point_effectors = value
+		retrieve_texture_data()
+
 @export var directional_light_power_multiplier: float = 1.0
 @export var point_light_power_multiplier: float = 1.0
 @export_group("Wind Controls")
@@ -100,6 +107,7 @@ func _process(delta : float):
 			if (tracked_directional_lights.size() * 2.0 != clouds_resource.directional_lights_data.size() \
 			or tracked_point_lights.size() * 2.0 != clouds_resource.point_lights_data.size()\
 			or tracked_directional_lights.size() != tracked_directional_light_shadow_steps.size()):
+				
 				retrieve_texture_data()
 				return
 			
@@ -116,6 +124,14 @@ func _process(delta : float):
 				if point_light_data_changed(tracked_point_lights[i], clouds_resource.point_lights_data[i * 2], clouds_resource.point_lights_data[i * 2 + 1]):
 					retrieve_texture_data()
 					return
+			
+			for i in range(tracked_point_effectors.size()):
+				if tracked_point_effectors[i] == null:
+					continue
+				if point_effector_data_changed(tracked_point_effectors[i], clouds_resource.point_effector_data[i * 2], clouds_resource.point_effector_data[i * 2 + 1]):
+					retrieve_texture_data()
+					return
+			
 	else:
 		update_continuously = false
 
@@ -170,6 +186,7 @@ func retrieve_texture_data():
 		
 		clouds_resource.directional_lights_data.clear()
 		clouds_resource.point_lights_data.clear()
+		clouds_resource.point_effector_data.clear()
 		
 		if not tracked_directional_light_shadow_steps:
 			tracked_directional_light_shadow_steps = []
@@ -183,14 +200,23 @@ func retrieve_texture_data():
 				var light = tracked_directional_lights[i]
 				var look_dir = light.global_transform.basis.z.normalized()
 				clouds_resource.directional_lights_data.append(Vector4(look_dir.x, look_dir.y, look_dir.z, tracked_directional_light_shadow_steps[i]))
-				clouds_resource.directional_lights_data.append(Vector4(light.light_color.r, light.light_color.g, light.light_color.b, light.light_color.a * light.light_energy * directional_light_power_multiplier))
+				clouds_resource.directional_lights_data.append(Vector4(light.light_color.r, light.light_color.g, light.light_color.b, round(light.light_color.a * light.light_energy * directional_light_power_multiplier * 10.0) / 10.0))
 		
 		for i in range(tracked_point_lights.size()):
 			if tracked_point_lights[i] != null:
 				var light = tracked_point_lights[i]
 				var light_pos = light.global_position
 				clouds_resource.point_lights_data.append(Vector4(light_pos.x, light_pos.y, light_pos.z, light.omni_range))
-				clouds_resource.point_lights_data.append(Vector4(light.light_color.r, light.light_color.g, light.light_color.b, light.light_color.a * light.light_energy * point_light_power_multiplier))
+				clouds_resource.point_lights_data.append(Vector4(light.light_color.r, light.light_color.g, light.light_color.b, round(light.light_color.a * light.light_energy * point_light_power_multiplier * 10.0) / 10.0))
+		
+		
+		for i in range(tracked_point_effectors.size()):
+			if tracked_point_effectors[i] != null:
+				var node = tracked_point_effectors[i]
+				var node_pos = node.global_position
+				clouds_resource.point_effector_data.append(Vector4(node_pos.x, node_pos.y, node_pos.z, node.Radius))
+				clouds_resource.point_effector_data.append(Vector4(node.Power, 0.0, 0.0, 0.0))
+		
 		
 		clouds_resource.lights_updated = true
 	
@@ -222,7 +248,7 @@ func direction_light_data_changed(light : DirectionalLight3D, shadowCount : int,
 		or light.light_color.r != colorData.x \
 		or light.light_color.g != colorData.y \
 		or light.light_color.b != colorData.z \
-		or light.light_color.a * light.light_energy != colorData.w
+		or round(light.light_color.a * light.light_energy * directional_light_power_multiplier * 10.0) / 10.0 != round(colorData.w * 10.0) / 10.0
 
 
 func point_light_data_changed(light : OmniLight3D, dirData : Vector4, colorData : Vector4):
@@ -233,4 +259,11 @@ func point_light_data_changed(light : OmniLight3D, dirData : Vector4, colorData 
 		or light.light_color.r != colorData.x \
 		or light.light_color.g != colorData.y \
 		or light.light_color.b != colorData.z \
-		or light.light_color.a * light.light_energy != colorData.w
+		or round(light.light_color.a * light.light_energy * point_light_power_multiplier * 10.0) / 10.0 != round(colorData.w * 10.0) / 10.0
+
+func point_effector_data_changed(node : SunshineCloudsEffector, dirData : Vector4, colorData : Vector4):
+	return node.global_position.x != dirData.x \
+		or node.global_position.y != dirData.y \
+		or node.global_position.z != dirData.z \
+		or node.Radius != dirData.w \
+		or node.Power != colorData.x

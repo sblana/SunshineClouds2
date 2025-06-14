@@ -53,7 +53,7 @@ layout(binding = 14) uniform uniformBuffer {
 
 	float cloud_sharpness;
 	float directionalLightsCount;
-	float pointLightsCount;
+	float reserveda;
 	float anisotropy;
 
 	float cloud_floor;
@@ -69,6 +69,10 @@ layout(binding = 14) uniform uniformBuffer {
 	vec2 WindDirection;
 	float fogEffectGround;
 	float samplePointsCount;
+
+	float pointLightsCount;
+	float pointEffectorCount;
+	vec2 reservedb;
 } genericData;
 
 struct DirectionalLight {
@@ -81,9 +85,19 @@ struct PointLight {
 	vec4 color; //a = intensity
 };
 
+struct PointEffector {
+	vec3 position; //w = radius
+	float radius;
+
+	float power;
+	float attenuation;
+	vec2 reserved;
+};
+
 layout(binding = 15) uniform LightsBuffer {
 	DirectionalLight directionalLights[4];
 	PointLight pointLights[128];
+	PointEffector pointEffectors[4];
 };
 
 layout(binding = 16, std430) restrict buffer SamplePointsBuffer {
@@ -198,29 +212,42 @@ float sampleScene(
 	float smallShape = texture(noise_small, (worldPosition - smallNoisePos) / smallnoisescale).r;
 
 	float curlHeightSample = (1.0 - gradientSample.a);
-	if (!ambientsample && curlHeightSample > 0.0 && min(curlPower, lod) > 0.5){
-		vec2 WindDirection = genericData.WindDirection;
-		float curlLod = remap(lod, 0.5, 1.0, 0.0, 1.0);
-		worldPosition += (((texture(curl_noise, (worldPosition - mediumNoisePos) / mediumnoisescale).xyz * 2.0) - 1.0) * vec3(1.0, 0.2, 1.0) + vec3(WindDirection.x, 0.0, WindDirection.y) * 0.9) * curlPower * curlHeightSample * curlLod;
-		worldPosition += (((texture(curl_noise, (worldPosition - mediumNoisePos) / mediumnoisescale).xyz * 2.0) - 1.0) * vec3(1.0, 0.2, 1.0) + vec3(WindDirection.x, 0.0, WindDirection.y) * 0.9) * curlPower * curlHeightSample * curlLod;
-		worldPosition += (((texture(curl_noise, (worldPosition - mediumNoisePos) / mediumnoisescale).xyz * 2.0) - 1.0) * vec3(1.0, 0.2, 1.0) + vec3(WindDirection.x, 0.0, WindDirection.y) * 0.9) * curlPower * curlHeightSample * curlLod;
-		
-		clampedWorldHeight = remap(worldPosition.y, cloudfloor, cloudceiling, 0.0, 1.0);
-		gradientSample = texture(heightmask, vec2(clampedWorldHeight, 0.5)).rgba;
+
+	float effectorAdditive = 0.0;
+
+	if (lod > 0.0){
+		for (int i = 0; i < int(genericData.pointEffectorCount); i++){
+			float effectorDistance = distance(pointEffectors[i].position, worldPosition);
+			if (effectorDistance < pointEffectors[i].radius){
+				effectorAdditive += mix(pointEffectors[i].power, 0.0, effectorDistance / pointEffectors[i].radius) * edgeFade;
+			}
+		}
+
+		if (!ambientsample && curlHeightSample > 0.0 && min(curlPower, lod) > 0.5){
+			vec2 WindDirection = genericData.WindDirection;
+			float curlLod = remap(lod, 0.5, 1.0, 0.0, 1.0);
+			worldPosition += (((texture(curl_noise, (worldPosition - mediumNoisePos) / mediumnoisescale).xyz * 2.0) - 1.0) * vec3(1.0, 0.2, 1.0) + vec3(WindDirection.x, 0.0, WindDirection.y) * 0.9) * curlPower * curlHeightSample * curlLod;
+			worldPosition += (((texture(curl_noise, (worldPosition - mediumNoisePos) / mediumnoisescale).xyz * 2.0) - 1.0) * vec3(1.0, 0.2, 1.0) + vec3(WindDirection.x, 0.0, WindDirection.y) * 0.9) * curlPower * curlHeightSample * curlLod;
+			worldPosition += (((texture(curl_noise, (worldPosition - mediumNoisePos) / mediumnoisescale).xyz * 2.0) - 1.0) * vec3(1.0, 0.2, 1.0) + vec3(WindDirection.x, 0.0, WindDirection.y) * 0.9) * curlPower * curlHeightSample * curlLod;
+			
+			clampedWorldHeight = remap(worldPosition.y, cloudfloor, cloudceiling, 0.0, 1.0);
+			gradientSample = texture(heightmask, vec2(clampedWorldHeight, 0.5)).rgba;
+		}
 	}
 
 	float largeShape = texture(large_noise, (worldPosition - largeNoisePos) / largenoisescale).r * extraLargeShape;
-	largeShape = smoothstep(coverage , coverage - 0.1, 1.0 - (largeShape * gradientSample.r));
+	largeShape = smoothstep(coverage , coverage - 0.1, 1.0 - (largeShape * gradientSample.r)) + max(effectorAdditive, 0.0);
 	vec4 mediumShapes = texture(noise_medium, (worldPosition - mediumNoisePos) / mediumnoisescale).rgba;
 	float mediumshape = 1.0 - mediumShapes.b;
 	smallShape = smallShape * gradientSample.g * pow((1.0 - mediumshape), smallscalePower);
 	
 
-	float shape = mediumshape;
+	float shape = mediumshape + max(effectorAdditive, 0.0);
 	shape = clamp(remap(shape, 1.0 - largeShape, 1.0, 0.0, 1.0), 0.0, 1.0);
 	shape = clamp(remap(shape, smallShape, 1.0, 0.0, 1.0), 0.0, 1.0);
+	shape += min(effectorAdditive, 0.0);
 
-	return shape * edgeFade;
+	return clamp((shape * edgeFade), 0.0, 1.0);
 }
 
 float sampleLighting(
@@ -595,9 +622,14 @@ void main() {
 		vec4 maskSample = texture(extra_large_noise, (curPos.xz - extralargeNoisePos.xz) / extralargenoiseScale);
 		ceilingSample = mix(halfCeiling, cloudceiling, maskSample.a);
 		if (clamp(curPos.y, cloudfloor, cloudceiling) == curPos.y){
+
 			
+
 			curLod = 1.0 - clamp(traveledDistance / lodMaxDistance, 0.0, 1.0);
 			newdensity = pow(sampleScene(largeNoisePos, mediumNoisePos, smallNoisePos, curPos, ceilingSample, cloudfloor, maskSample.a, largenoiseScale, mediumnoiseScale, smallnoiseScale, coverage, smallNoiseMultiplier, curlPower, curLod, false) * densityMultiplier, sharpness) * depthFade;
+			
+			
+			
 			sampleAtmospherics(curPos, atmosphericHeight, newStep, Rayleighscaleheight, Miescaleheight, RayleighScatteringCoef, MieScatteringCoef, atmosphericDensity, density, totalRlh, totalMie, iOdRlh, iOdMie); 
 			
 			
@@ -641,8 +673,8 @@ void main() {
 					float lightDistanceWeight = length(lightToOriginDelta); 
 					if (pointLights[lightI].color.a > 0.0 && lightDistanceWeight < pointLights[lightI].position.w){
 						lightToOriginDelta = normalize(lightToOriginDelta);
-						float densitySample = 1.0 - newdensity;
-						//float densitySample = sampleLighting(3, curPos, extralargeNoisePos, largeNoisePos, mediumNoisePos, smallNoisePos, lightToOriginDelta, densityMultiplier, 1.0, min(maxstep, lightDistanceWeight), ceilingSample, cloudfloor, extralargenoiseScale, largenoiseScale, mediumnoiseScale, smallnoiseScale, coverage, smallNoiseMultiplier, curlPower, curLod);
+						//float densitySample = 1.0 - newdensity;
+						float densitySample = sampleLighting(3, curPos, extralargeNoisePos, largeNoisePos, mediumNoisePos, smallNoisePos, lightToOriginDelta, densityMultiplier, 1.0, min(maxstep, lightDistanceWeight), ceilingSample, cloudfloor, extralargenoiseScale, largenoiseScale, mediumnoiseScale, smallnoiseScale, coverage, smallNoiseMultiplier, curlPower, curLod);
 						
 						float henyeygreenstein = pow(HenyeyGreenstein(genericData.anisotropy, dot(lightToOriginDelta, raydirection)), mix(1.0, 2.0, 1.0 - genericData.anisotropy)); 
 						densitySample = BeersLaw(lightDistanceWeight, densitySample * henyeygreenstein);
