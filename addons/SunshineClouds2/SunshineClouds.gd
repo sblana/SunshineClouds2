@@ -315,6 +315,11 @@ func _render_callback(effect_callback_type, render_data):
 	elif pipeline.is_valid() and height_gradient and extra_large_noise_patterns and large_scale_noise and medium_scale_noise and small_scale_noise and dither_noise and curl_noise:
 		buffers = render_data.get_render_scene_buffers() as RenderSceneBuffersRD
 		if buffers:
+			var msaa = buffers.get_msaa_3d()
+			if msaa != 0:
+				enabled = false
+				return
+			
 			var size = buffers.get_internal_size()
 			if size.x == 0 and size.y == 0:
 				return
@@ -332,7 +337,6 @@ func _render_callback(effect_callback_type, render_data):
 			
 			var new_size = size / resscale
 			var view_count = buffers.get_view_count()
-			
 			if size != last_size or uniform_sets == null or uniform_sets.size() != view_count * 3 or color_images.size() == 0 or color_images[0] != buffers.get_color_layer(0):
 				initialize_compute()
 				
@@ -356,6 +360,7 @@ func _render_callback(effect_callback_type, render_data):
 				
 				postpass_push_constants = postpass_data_ms.data_array
 				color_images.clear()
+				
 				#print("postpass_push_constants",postpass_push_constants.size())
 				for view in range(view_count):
 					color_images.append(buffers.get_color_layer(view))
