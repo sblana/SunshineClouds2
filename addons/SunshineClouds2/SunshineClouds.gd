@@ -12,9 +12,6 @@ class_name SunshineCloudsGD
 @export_range(0, 10) var lighting_density : float = 0.55
 @export_range(0, 1) var fog_effect_ground : float = 1.0
 
-@export_subgroup("Reflections")
-@export var reflections_globalshaderparam : String = ""
-
 @export_subgroup("Colors")
 @export_range(0, 1) var clouds_anisotropy : float = 0.3
 @export var cloud_ambient_color : Color = Color(0.352, 0.624, 0.784, 1.0)
@@ -29,7 +26,7 @@ class_name SunshineCloudsGD
 @export_range(100, 100000) var medium_noise_scale : float = 6000.0
 @export_range(100, 10000) var small_noise_scale : float = 2500.0
 @export_range(0, 2) var clouds_sharpness : float = 1.0
-@export_range(0, 3) var clouds_detail_strength : float = 0.9
+@export_range(0, 3) var clouds_detail_power : float = 0.9
 @export_range(0, 50000) var curl_noise_strength : float = 5000.0
 @export_range(0, 2) var lighting_sharpness : float = 0.05
 
@@ -62,6 +59,9 @@ class_name SunshineCloudsGD
 @export_range(0, 1000) var dither_speed : float = 100.8254
 @export_range(0, 20) var blur_power : float = 2.0
 @export_range(0, 6) var blur_quality : float = 1.0
+
+@export_subgroup("Reflections")
+@export var reflections_globalshaderparam : String = ""
 
 @export_subgroup("Performance")
 @export var min_step_distance : float = 100.0
@@ -124,6 +124,7 @@ var push_constants : PackedByteArray
 var prepass_push_constants : PackedByteArray
 var postpass_push_constants : PackedByteArray
 var last_size : Vector2i = Vector2i(0, 0)
+var color_images : Array[RID] = []
 
 var buffers : RenderSceneBuffersRD
 
@@ -332,7 +333,7 @@ func _render_callback(effect_callback_type, render_data):
 			var new_size = size / resscale
 			var view_count = buffers.get_view_count()
 			
-			if size != last_size or uniform_sets == null or uniform_sets.size() != view_count * 3:
+			if size != last_size or uniform_sets == null or uniform_sets.size() != view_count * 3 or color_images.size() == 0 or color_images[0] != buffers.get_color_layer(0):
 				initialize_compute()
 				
 				accumulation_textures.clear()
@@ -354,15 +355,16 @@ func _render_callback(effect_callback_type, render_data):
 				postpass_data_ms.put_float(0.0)
 				
 				postpass_push_constants = postpass_data_ms.data_array
+				color_images.clear()
 				#print("postpass_push_constants",postpass_push_constants.size())
 				for view in range(view_count):
-					var color_image : RID = buffers.get_color_layer(view)
+					color_images.append(buffers.get_color_layer(view))
 					var depth_image : RID = buffers.get_depth_layer(view)
 					
 					var blankImageData : PackedByteArray = []
 					blankImageData.resize(new_size.x * new_size.y * 4 * 4)
 					
-					var base_colorformat : RDTextureFormat = rd.texture_get_format(color_image)
+					var base_colorformat : RDTextureFormat = rd.texture_get_format(color_images[view])
 					base_colorformat.format = RenderingDevice.DATA_FORMAT_R32G32B32A32_SFLOAT
 					base_colorformat.width = new_size.x
 					base_colorformat.height = new_size.y
@@ -550,7 +552,7 @@ func _render_callback(effect_callback_type, render_data):
 					var postpass_color_uniform = RDUniform.new()
 					postpass_color_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_IMAGE
 					postpass_color_uniform.binding = 3
-					postpass_color_uniform.add_id(color_image)
+					postpass_color_uniform.add_id(color_images[view])
 					postpass_uniforms_array.append(postpass_color_uniform)
 					
 					var postpass_depth_uniform = RDUniform.new()
@@ -586,7 +588,7 @@ func _render_callback(effect_callback_type, render_data):
 			ms.put_float(current_time)
 			ms.put_float(clouds_coverage)
 			ms.put_float(clouds_density)
-			ms.put_float(clouds_detail_strength)
+			ms.put_float(clouds_detail_power)
 			
 			ms.put_float(lighting_density)
 			ms.put_float(accumulation_decay)

@@ -26,3 +26,10 @@ enabled=PackedStringArray("res://addons/SunshineClouds2/plugin.cfg")
 [rendering]
 
 scaling_3d/mode=2
+
+[shader_globals]
+
+Reflections={
+"type": "sampler2D",
+"value": ""
+}
