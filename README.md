@@ -1,10 +1,9 @@
 <img src="https://github.com/Bonkahe/SunshineClouds2/blob/main/githubstuff/Logo.png?raw=true">
 
 # SunshineClouds
-30 Minute DeepDive: [https://youtu.be/hqhWR0CxZHA?si=deiHEKe2ezKc1ix4](https://youtu.be/hqhWR0CxZHA?si=deiHEKe2ezKc1ix4)
-
 ## Videos:
-https://youtu.be/hqhWR0CxZHA
+Beginner tutorial: [https://www.youtube.com/watch?v=aEDDkGIfwDY](https://www.youtube.com/watch?v=aEDDkGIfwDY)
+30 Minute DeepDive: [https://www.youtube.com/watch?v=hqhWR0CxZHA](https://www.youtube.com/watch?v=hqhWR0CxZHA)
 
 ## Updates:
 
