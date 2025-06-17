@@ -2,7 +2,9 @@
 
 # SunshineClouds
 ## Videos:
+
 Beginner tutorial: [https://www.youtube.com/watch?v=aEDDkGIfwDY](https://www.youtube.com/watch?v=aEDDkGIfwDY)
+
 30 Minute DeepDive: [https://www.youtube.com/watch?v=hqhWR0CxZHA](https://www.youtube.com/watch?v=hqhWR0CxZHA)
 
 ## Updates:
