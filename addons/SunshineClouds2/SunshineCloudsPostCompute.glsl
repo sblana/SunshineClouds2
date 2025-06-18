@@ -425,5 +425,10 @@ void main() {
 
 	
     imageStore(color_image, uv, color);
-	imageStore(reflections_sample, ivec2(accumUV * vec2(lowres_size)), vec4(color.rgb, traveledDistance));
+	if (resolutionScale != 1){
+		imageStore(reflections_sample, ivec2(accumUV * vec2(lowres_size)), vec4(color.rgb, traveledDistance));
+	}
+	else{
+		imageStore(reflections_sample, uv, vec4(color.rgb, traveledDistance));
+	}
 }
