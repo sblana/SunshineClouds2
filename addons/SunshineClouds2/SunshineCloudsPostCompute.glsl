@@ -85,8 +85,9 @@ struct PointEffector {
 layout(binding = 6) uniform LightsBuffer {
 	DirectionalLight directionalLights[4];
 	PointLight pointLights[128];
-	PointEffector pointEffectors[4];
+	PointEffector pointEffectors[64];
 };
+
 
 // Our push constant
 layout(push_constant, std430) uniform Params {

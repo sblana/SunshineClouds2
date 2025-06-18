@@ -81,7 +81,7 @@ light_energy = 11.685
 omni_range = 20000.0
 
 [node name="SunshineCloudsEffector" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 961.603, -577.632, -16084.3)
+transform = Transform3D(0.241651, 0, 0.970363, 0, 1, 0, -0.970363, 0, 0.241651, -8814.63, -2907.13, -21897.7)
 script = ExtResource("3_afwv5")
 Radius = 16788.2
 Power = 1.18
@@ -101,8 +101,8 @@ extra_large_structures_wind_speed = 1400.0
 large_structures_wind_speed = 1000.0
 medium_structures_wind_speed = 400.0
 small_structures_wind_speed = 120.0
-extra_large_clouds_pos = Vector3(61557.4, 0, 116923)
-large_clouds_pos = Vector3(-15758.2, 0, -18466.3)
-medium_clouds_pos = Vector3(-9667.59, 0, -1283.57)
-small_clouds_pos = Vector3(3296.23, -2295.51, -3526.73)
+extra_large_clouds_pos = Vector3(27745.8, 0, 83105.2)
+large_clouds_pos = Vector3(44801.2, 0, 42093)
+medium_clouds_pos = Vector3(3004.37, 0, -8810.39)
+small_clouds_pos = Vector3(536.022, 2771.18, 1539.96)
 metadata/_custom_type_script = "uid://djusduuxf0voj"

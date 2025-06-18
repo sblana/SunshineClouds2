@@ -98,7 +98,7 @@ struct PointEffector {
 layout(binding = 15) uniform LightsBuffer {
 	DirectionalLight directionalLights[4];
 	PointLight pointLights[128];
-	PointEffector pointEffectors[4];
+	PointEffector pointEffectors[64];
 };
 
 layout(binding = 16, std430) restrict buffer SamplePointsBuffer {
@@ -629,13 +629,8 @@ void main() {
 			
 		if (clamp(curPos.y, cloudfloor, cloudceiling) == curPos.y){
 
-			
-
 			curLod = 1.0 - clamp(traveledDistance / lodMaxDistance, 0.0, 1.0);
 			newdensity = pow(sampleScene(largeNoisePos, mediumNoisePos, smallNoisePos, curPos, ceilingSample, cloudfloor, maskSample.a, largenoiseScale, mediumnoiseScale, smallnoiseScale, coverage, smallNoiseMultiplier, curlPower, curLod, false) * densityMultiplier, sharpness) * depthFade;
-			
-			
-			
 			
 			
 			

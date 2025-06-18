@@ -512,7 +512,7 @@ func _render_callback(effect_callback_type, render_data):
 					camera_uniform.add_id(general_data_buffer)
 					uniforms_array.append(camera_uniform)
 					
-					light_data_buffer = rd.uniform_buffer_create(4352)
+					light_data_buffer = rd.uniform_buffer_create(6272)
 					var light_data_uniform = RDUniform.new()
 					light_data_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_UNIFORM_BUFFER
 					light_data_uniform.binding = 15
@@ -874,8 +874,8 @@ func update_matrices(camera_tr, view_proj):
 func update_lights():
 	lights_updated = false
 	
-	if light_data.size() != 4352: #32 + 1024 + 32 * 4 bytes for each float = 4352.
-		light_data.resize(4352)
+	if light_data.size() != 6272: #32 + 1024 + 512 * 4 bytes for each float = 6272.
+		light_data.resize(6272)
 	
 	if (directional_lights_data.size() == 0): #defaults to having a default light.
 		directional_lights_data.append(Vector4(0.5, 1.0, 0.5, 16.0))
@@ -905,7 +905,7 @@ func update_lights():
 		idx += 4
 	
 	idx = 4224
-	for i in range(min(point_effector_data.size(), 8)):
+	for i in range(min(point_effector_data.size(), 128)):
 		light_data.encode_float(idx, point_effector_data[i].x)
 		idx += 4
 		light_data.encode_float(idx, point_effector_data[i].y)
