@@ -89,7 +89,7 @@ func _process(delta : float):
 			large_clouds_pos = wrap_vector(large_clouds_pos, _large_clouds_domain)
 			medium_clouds_pos += wind_direction * medium_structures_wind_speed * delta
 			medium_clouds_pos = wrap_vector(medium_clouds_pos, _medium_clouds_domain)
-			small_clouds_pos += (-wind_direction + Vector3.UP).normalized() * small_structures_wind_speed * delta
+			small_clouds_pos += ((wind_direction * small_structures_wind_speed) + (Vector3.UP * abs(small_structures_wind_speed))) * delta
 			small_clouds_pos = wrap_vector(small_clouds_pos, _small_clouds_domain)
 			
 			clouds_resource.origin_offset = origin_offset

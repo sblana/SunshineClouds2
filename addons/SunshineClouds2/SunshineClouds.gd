@@ -14,6 +14,7 @@ class_name SunshineCloudsGD
 
 @export_subgroup("Colors")
 @export_range(0, 1) var clouds_anisotropy : float = 0.3
+@export_range(0, 1) var clouds_powder : float = 0.5
 @export var cloud_ambient_color : Color = Color(0.352, 0.624, 0.784, 1.0)
 @export var cloud_ambient_tint : Color = Color(0.352, 0.624, 0.784, 1.0)
 @export var atmosphere_color : Color = Color(0.801, 0.893, 0.962, 1.0)
@@ -29,6 +30,8 @@ class_name SunshineCloudsGD
 @export_range(0, 3) var clouds_detail_power : float = 0.9
 @export_range(0, 50000) var curl_noise_strength : float = 5000.0
 @export_range(0, 2) var lighting_sharpness : float = 0.05
+@export_range(0, 1) var wind_swept_range : float = 0.5
+@export_range(0, 5000) var wind_swept_strength : float = 500.0
 
 @export var cloud_floor : float = 1500.0
 @export var cloud_ceiling : float = 25000.0
@@ -841,7 +844,7 @@ func update_matrices(camera_tr, view_proj):
 
 	general_data.encode_float(idx, clouds_sharpness); idx += 4
 	general_data.encode_float(idx, float(directional_lights_data.size()) / 2.0); idx += 4
-	general_data.encode_float(idx, 0.0); idx += 4
+	general_data.encode_float(idx, clouds_powder); idx += 4
 	general_data.encode_float(idx, clouds_anisotropy); idx += 4
 
 	general_data.encode_float(idx, cloud_floor); idx += 4
@@ -861,8 +864,8 @@ func update_matrices(camera_tr, view_proj):
 	
 	general_data.encode_float(idx, float(point_lights_data.size()) / 2.0); idx += 4
 	general_data.encode_float(idx, float(point_effector_data.size()) / 2.0); idx += 4
-	general_data.encode_float(idx, 0.0); idx += 4
-	general_data.encode_float(idx, 0.0); idx += 4
+	general_data.encode_float(idx, wind_swept_range); idx += 4
+	general_data.encode_float(idx, wind_swept_strength); idx += 4
 	
 	# Copy to byte buffer
 	rd.buffer_update(general_data_buffer, 0, general_data.size(), general_data)

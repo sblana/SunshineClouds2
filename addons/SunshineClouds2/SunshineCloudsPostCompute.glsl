@@ -414,7 +414,7 @@ void main() {
 			float lightPower = light.color.a * sunUpWeight;
 			if (lightPower > 0.0){
 				vec4 atmosphericData = sampleAllAtmospherics(rayOrigin, raydirection, linear_depth, traveledDistance, 0.0, linear_depth / 10.0, 10.0, atmosphericDensity, sundir, light.color.rgb * lightPower, ambientfogdistancecolor);
-				color.rgb = mix(color.rgb, atmosphericData.rgb, (atmosphericData.a * lightPower) * groundLinearFade); //causes jitter in the sky
+				color.rgb = mix(color.rgb, atmosphericData.rgb, atmosphericData.a * groundLinearFade); //causes jitter in the sky
 			}
 		}
 	}

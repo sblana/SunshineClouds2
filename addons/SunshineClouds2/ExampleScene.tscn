@@ -81,10 +81,10 @@ light_energy = 11.685
 omni_range = 20000.0
 
 [node name="SunshineCloudsEffector" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7720.21, 3870.75, -25777)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 961.603, -577.632, -16084.3)
 script = ExtResource("3_afwv5")
-Radius = 6788.16
-Power = 1.773
+Radius = 16788.2
+Power = 1.18
 metadata/_custom_type_script = "uid://bxlm4e5qfb7uu"
 
 [node name="SunshineCloudsDriverGD" type="Node" parent="." node_paths=PackedStringArray("tracked_directional_lights", "tracked_point_lights", "tracked_point_effectors")]
@@ -101,8 +101,8 @@ extra_large_structures_wind_speed = 1400.0
 large_structures_wind_speed = 1000.0
 medium_structures_wind_speed = 400.0
 small_structures_wind_speed = 120.0
-extra_large_clouds_pos = Vector3(80292.1, 0, 80292.1)
-large_clouds_pos = Vector3(23084.1, 0, 23084.1)
-medium_clouds_pos = Vector3(4509.14, 0, 4509.14)
-small_clouds_pos = Vector3(3220.08, -3220.08, 3220.08)
+extra_large_clouds_pos = Vector3(-100636, 0, -45273.3)
+large_clouds_pos = Vector3(-13098.8, 0, -15807)
+medium_clouds_pos = Vector3(4588.75, 0, -7226.16)
+small_clouds_pos = Vector3(-2779.04, -543.882, -1775.1)
 metadata/_custom_type_script = "uid://djusduuxf0voj"

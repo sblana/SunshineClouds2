@@ -53,7 +53,7 @@ layout(binding = 14) uniform uniformBuffer {
 
 	float cloud_sharpness;
 	float directionalLightsCount;
-	float reserveda;
+	float powderStrength;
 	float anisotropy;
 
 	float cloud_floor;
@@ -72,7 +72,8 @@ layout(binding = 14) uniform uniformBuffer {
 
 	float pointLightsCount;
 	float pointEffectorCount;
-	vec2 reservedb;
+	float windSweptRange;
+	float windSweptPower;
 } genericData;
 
 struct DirectionalLight {
@@ -214,6 +215,8 @@ float sampleScene(
 	float curlHeightSample = (1.0 - gradientSample.a);
 
 	float effectorAdditive = 0.0;
+	vec2 WindDirection = genericData.WindDirection;
+	worldPosition += vec3(WindDirection.x, 0.0, WindDirection.y) * genericData.windSweptPower * quadraticIn(1.0 - clamp(clampedWorldHeight / genericData.windSweptRange, 0.0, 1.0));
 
 	if (lod > 0.0){
 		for (int i = 0; i < int(genericData.pointEffectorCount); i++){
@@ -224,7 +227,7 @@ float sampleScene(
 		}
 
 		if (!ambientsample && curlHeightSample > 0.0 && min(curlPower, lod) > 0.5){
-			vec2 WindDirection = genericData.WindDirection;
+			
 			float curlLod = remap(lod, 0.5, 1.0, 0.0, 1.0);
 			worldPosition += (((texture(curl_noise, (worldPosition - mediumNoisePos) / mediumnoisescale).xyz * 2.0) - 1.0) * vec3(1.0, 0.2, 1.0) + vec3(WindDirection.x, 0.0, WindDirection.y) * 0.9) * curlPower * curlHeightSample * curlLod;
 			worldPosition += (((texture(curl_noise, (worldPosition - mediumNoisePos) / mediumnoisescale).xyz * 2.0) - 1.0) * vec3(1.0, 0.2, 1.0) + vec3(WindDirection.x, 0.0, WindDirection.y) * 0.9) * curlPower * curlHeightSample * curlLod;
@@ -621,6 +624,9 @@ void main() {
 		
 		vec4 maskSample = texture(extra_large_noise, (curPos.xz - extralargeNoisePos.xz) / extralargenoiseScale);
 		ceilingSample = mix(halfCeiling, cloudceiling, maskSample.a);
+		
+		sampleAtmospherics(curPos, atmosphericHeight, newStep, Rayleighscaleheight, Miescaleheight, RayleighScatteringCoef, MieScatteringCoef, atmosphericDensity, density, totalRlh, totalMie, iOdRlh, iOdMie); 
+			
 		if (clamp(curPos.y, cloudfloor, cloudceiling) == curPos.y){
 
 			
@@ -630,7 +636,6 @@ void main() {
 			
 			
 			
-			sampleAtmospherics(curPos, atmosphericHeight, newStep, Rayleighscaleheight, Miescaleheight, RayleighScatteringCoef, MieScatteringCoef, atmosphericDensity, density, totalRlh, totalMie, iOdRlh, iOdMie); 
 			
 			
 			
@@ -638,6 +643,8 @@ void main() {
 				if (initialdistanceSample < 0.0){
 					initialdistanceSample = traveledDistance;
 				}
+
+				float powderEffect = pow(newdensity, genericData.powderStrength * 2.0);
 
 				paintedColor += maskSample.rgb;
 				lightingSamples += 1.0;
@@ -656,11 +663,11 @@ void main() {
 							float thisStepLightingWeight = (clamp(pow(densitySample, lightingSharpness), 0.0, 1.0)) * sunUpWeight;
 							
 
-							lightColor.rgb += pow(directionalLights[lightI].color.rgb * directionalLights[lightI].color.a * thisStepLightingWeight, vec3(2.2));
+							lightColor.rgb += pow(directionalLights[lightI].color.rgb * directionalLights[lightI].color.a * thisStepLightingWeight, vec3(2.2)) * powderEffect;
 							directionalLightSunUpPower[lightI].g += directionalLights[lightI].color.a * thisStepLightingWeight;
 						}
 						else{
-							lightColor.rgb += pow(directionalLights[lightI].color.rgb * directionalLights[lightI].color.a * sunUpWeight, vec3(2.2));
+							lightColor.rgb += pow(directionalLights[lightI].color.rgb * directionalLights[lightI].color.a * sunUpWeight, vec3(2.2)) * powderEffect;
 							directionalLightSunUpPower[lightI].g += directionalLights[lightI].color.a * sunUpWeight;
 						}
 
@@ -678,7 +685,7 @@ void main() {
 						
 						float henyeygreenstein = pow(HenyeyGreenstein(genericData.anisotropy, dot(lightToOriginDelta, raydirection)), mix(1.0, 2.0, 1.0 - genericData.anisotropy)); 
 						densitySample = BeersLaw(lightDistanceWeight, densitySample * henyeygreenstein);
-						densitySample = mix(densitySample, newdensity, 0.3);
+						densitySample = mix(densitySample, newdensity, 0.5) * powderEffect;
 						lightDistanceWeight = lightDistanceWeight / pointLights[lightI].position.w;
 						lightDistanceWeight = pointLights[lightI].color.a * pow((1.0 - lightDistanceWeight), 2.2) * densitySample;
 
@@ -745,7 +752,7 @@ void main() {
 
 	for (int lightI = 0; lightI < directionalLightCount; lightI++){
 		if (directionalLights[lightI].color.a > 0.0){
-			float sunUpWeight = directionalLights[lightI].color.a * directionalLightSunUpPower[lightI].r;
+			float sunUpWeight = clamp(directionalLightSunUpPower[lightI].r / lightingSamples, 0.0, 1.0);
 			float sunAOPower = clamp(directionalLightSunUpPower[lightI].g / lightingSamples, 0.0, 1.0);
 			float mu = dot(raydirection, directionalLights[lightI].direction.xyz);
 			
@@ -756,7 +763,7 @@ void main() {
 			float pMie = 3.0 / (8.0 * PI) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * MieprefferedDirection, 1.5) * (2.0 + gg));
 
 			float AtmosphericsDistancePower = length(vec3(RayleighScatteringCoef * totalRlh + MieScatteringCoef * totalMie));
-			vec3 atmospherics = 22.0 * (ambientfogdistancecolor * RayleighScatteringCoef * totalRlh + pMie * MieScatteringCoef * directionalLights[lightI].color.rgb * sunAOPower * totalMie);
+			vec3 atmospherics = 22.0 * (ambientfogdistancecolor * RayleighScatteringCoef * totalRlh + pMie * MieScatteringCoef * (directionalLights[lightI].color.rgb * sunAOPower) * totalMie);
 
 			lightColor.rgb = mix(lightColor.rgb, atmospherics, (AtmosphericsDistancePower * sunUpWeight)); //causes jitter in the sky
 		}
