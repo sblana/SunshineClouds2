@@ -371,8 +371,8 @@ void main() {
 	vec3 rayOrigin = genericData.view[3].xyz; //center of camera for the ray origin, not worried about the screen width playing in, as it's for clouds.
 
 
-	ivec2 tempuv = uv + ivec2(resolutionScale) * 2;
-	vec2 accumUV = vec2(float(tempuv.x) / float(size.x), float(tempuv.y) / float(size.y));
+	vec2 tempuv = vec2(uv) + vec2(resolutionScale) * 2.0;
+	vec2 accumUV = vec2(tempuv.x / float(size.x), tempuv.y / float(size.y));
 	accumUV = clamp(accumUV, vec2(0.0), vec2(1.0));
 	
 	vec2 lowres_sizefloat = vec2(lowres_size);
