@@ -318,9 +318,9 @@ func _render_callback(effect_callback_type, render_data):
 	elif pipeline.is_valid() and height_gradient and extra_large_noise_patterns and large_scale_noise and medium_scale_noise and small_scale_noise and dither_noise and curl_noise:
 		buffers = render_data.get_render_scene_buffers() as RenderSceneBuffersRD
 		if buffers:
-			var msaa = buffers.get_msaa_3d()
-			if msaa != 0:
-				enabled = false
+			var msaa = buffers.get_msaa_3d() != 0
+			if msaa:
+				
 				return
 			
 			var size = buffers.get_internal_size()
