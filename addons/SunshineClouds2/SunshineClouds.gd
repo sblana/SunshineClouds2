@@ -319,10 +319,7 @@ func _render_callback(effect_callback_type, render_data):
 		buffers = render_data.get_render_scene_buffers() as RenderSceneBuffersRD
 		if buffers:
 			var msaa = buffers.get_msaa_3d() != 0
-			if msaa and effect_callback_type != CompositorEffect.EFFECT_CALLBACK_TYPE_POST_TRANSPARENT:
-				
-				effect_callback_type = CompositorEffect.EFFECT_CALLBACK_TYPE_POST_TRANSPARENT
-				print("When MSAA is enabled, callback must be post transparent.")
+			if msaa:
 				return
 			
 			var size = buffers.get_internal_size()
@@ -368,8 +365,8 @@ func _render_callback(effect_callback_type, render_data):
 				
 				#print("postpass_push_constants",postpass_push_constants.size())
 				for view in range(view_count):
-					color_images.append(buffers.get_color_layer(view, msaa))
-					var depth_image : RID = buffers.get_depth_layer(view, msaa)
+					color_images.append(buffers.get_color_layer(view))
+					var depth_image : RID = buffers.get_depth_layer(view)
 					
 					var blankImageData : PackedByteArray = []
 					blankImageData.resize(new_size.x * new_size.y * 4 * 4)
