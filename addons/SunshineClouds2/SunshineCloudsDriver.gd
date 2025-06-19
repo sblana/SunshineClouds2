@@ -175,7 +175,7 @@ func recursively_find_env(thisNode: Node) -> WorldEnvironment:
 	return null
 
 func retrieve_texture_data():
-	if _updating_settings:
+	if _updating_settings || !is_inside_tree():
 		return
 	_updating_settings = true
 	if clouds_resource != null:

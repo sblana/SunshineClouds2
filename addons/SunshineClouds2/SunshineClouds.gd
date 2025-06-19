@@ -128,6 +128,7 @@ var prepass_push_constants : PackedByteArray
 var postpass_push_constants : PackedByteArray
 var last_size : Vector2i = Vector2i(0, 0)
 var color_images : Array[RID] = []
+var msaa_color_images : Array[RID] = []
 
 var buffers : RenderSceneBuffersRD
 
@@ -217,6 +218,12 @@ func clear_compute():
 				if item.is_valid():
 					rd.free_rid(item)
 			accumulation_textures.clear()
+		
+		if msaa_color_images.size() > 0:
+			for item in msaa_color_images:
+				if item.is_valid():
+					rd.free_rid(item)
+			msaa_color_images.clear()
 
 func initialize_compute():
 	first_run = true
@@ -362,16 +369,25 @@ func _render_callback(effect_callback_type, render_data):
 				
 				postpass_push_constants = postpass_data_ms.data_array
 				color_images.clear()
+				msaa_color_images.clear()
 				
 				#print("postpass_push_constants",postpass_push_constants.size())
 				for view in range(view_count):
-					color_images.append(buffers.get_color_layer(view))
-					var depth_image : RID = buffers.get_depth_layer(view)
+					color_images.append(buffers.get_color_layer(view, msaa))
+					
+					var depth_image : RID = buffers.get_depth_layer(view, msaa)
 					
 					var blankImageData : PackedByteArray = []
 					blankImageData.resize(new_size.x * new_size.y * 4 * 4)
 					
 					var base_colorformat : RDTextureFormat = rd.texture_get_format(color_images[view])
+					
+					
+					if (msaa):
+						base_colorformat.usage_bits = RenderingDevice.TEXTURE_USAGE_STORAGE_BIT | RenderingDevice.TEXTURE_USAGE_SAMPLING_BIT | RenderingDevice.TEXTURE_USAGE_CAN_COPY_TO_BIT | RenderingDevice.TEXTURE_USAGE_CAN_COPY_FROM_BIT
+						
+						msaa_color_images.append(rd.texture_create(base_colorformat, RDTextureView.new(), []))
+					
 					base_colorformat.format = RenderingDevice.DATA_FORMAT_R32G32B32A32_SFLOAT
 					base_colorformat.width = new_size.x
 					base_colorformat.height = new_size.y
@@ -559,7 +575,7 @@ func _render_callback(effect_callback_type, render_data):
 					var postpass_color_uniform = RDUniform.new()
 					postpass_color_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_IMAGE
 					postpass_color_uniform.binding = 3
-					postpass_color_uniform.add_id(color_images[view])
+					postpass_color_uniform.add_id(msaa_color_images[view] if msaa else color_images[view])
 					postpass_uniforms_array.append(postpass_color_uniform)
 					
 					var postpass_depth_uniform = RDUniform.new()
@@ -626,6 +642,9 @@ func _render_callback(effect_callback_type, render_data):
 			var y_groups = ((size.y - 1) / 32 / resscale) + 1
 			
 			for view in view_count:
+				if (msaa):
+					rd.texture_copy(color_images[view], msaa_color_images[view], Vector3.ZERO, Vector3.ZERO, Vector3(size.x, size.y, 0.0),0,0,0,0)
+				
 				var prepass_list = rd.compute_list_begin()
 				rd.compute_list_bind_compute_pipeline(prepass_list, prepass_pipeline)
 				rd.compute_list_bind_uniform_set(prepass_list, uniform_sets[view * 3], 0)
@@ -646,6 +665,10 @@ func _render_callback(effect_callback_type, render_data):
 				rd.compute_list_set_push_constant(postpass_list, postpass_push_constants, postpass_push_constants.size())
 				rd.compute_list_dispatch(postpass_list, prepass_x_groups, prepass_y_groups, 1)
 				rd.compute_list_end()
+				
+				if (msaa):
+					rd.texture_copy(msaa_color_images[view], color_images[view], Vector3.ZERO, Vector3.ZERO, Vector3(size.x, size.y, 0.0),0,0,0,0)
+				
 			
 			if (!positionResetting && positionQuerying):
 				positionResetting = true
