@@ -409,23 +409,32 @@ void main() {
 
 
     float density = clamp(currentAccumilation.a, 0.0, 1.0);
-    float traveledDistance = currentColorData.g;
+    float sampledDepth = currentColorData.r;
+	float traveledDistance = currentColorData.g;
 	float firstTraveledDistance = currentColorData.b;
 
-	//bool debugCollisions = false;
-	if (traveledDistance > linear_depth && firstTraveledDistance > linear_depth){
-		//debugCollisions = true;
-		float lerp = 1.0 - clamp(remap(firstTraveledDistance - linear_depth, minstep, maxstep, 0.0, 1.0), 0.0, 1.0);
-		density *= lerp;
+	float lerp = 0.0;
+	bool debugCollisions = false;
+	if (traveledDistance > linear_depth){
+		
+		if (firstTraveledDistance > linear_depth){
+			lerp = clamp(remap(firstTraveledDistance - linear_depth, minstep, maxstep, 0.0, 1.0), 0.0, 1.0);
+			density *= 1.0 - lerp;
+		}
+		else if(sampledDepth > linear_depth + maxstep){
+			//debugCollisions = true;
+			lerp = clamp(remap(linear_depth - firstTraveledDistance, minstep, maxstep, 0.0, 1.0), 0.0, 1.0);
+			density *= lerp;
+		}
 		// float lerp = clamp(remap(linear_depth, firstTraveledDistance, traveledDistance, 0.0, 1.0), 0.0, 1.0);
 		// density *= lerp;
 		// if (firstTraveledDistance < linear_depth){
 
-		// 	float lerp = clamp(remap(linear_depth, firstTraveledDistance, traveledDistance, 0.0, 1.0), 0.0, 1.0);
-		// 	density *= lerp;
+		// 	density = 0.0;
 		// }
 		// else{
-		// 	density = 0.0;
+		// 	lerp = clamp(remap(firstTraveledDistance - linear_depth, minstep, maxstep, 0.0, 1.0), 0.0, 1.0);
+		// 	density *= 1.0 - lerp;
 		// }
 		// traveledDistance = linear_depth;
 	}
@@ -453,9 +462,9 @@ void main() {
 
 	color.rgb = mix(color.rgb, currentAccumilation.rgb, density);
 	
-	// if (debugCollisions){
-	// 	color.rgb = vec3(1.0, 0.0, 0.0);
-	// }
+	if (debugCollisions){
+		color.rgb = vec3(1.0, 0.0, 0.0);
+	}
 	
     imageStore(color_image, uv, color);
 	if (resolutionScale != 1){
