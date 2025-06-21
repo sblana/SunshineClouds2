@@ -411,7 +411,7 @@ void main() {
 	float firstTraveledDistance = currentColorData.b;
 
 	
-	if ( traveledDistance > linear_depth){
+	if (traveledDistance - linear_depth > maxstep){
 		if (firstTraveledDistance < linear_depth){
 
 			float lerp = clamp(remap(linear_depth, firstTraveledDistance, traveledDistance, 0.0, 1.0), 0.0, 1.0);
@@ -423,7 +423,7 @@ void main() {
 		traveledDistance = linear_depth;
 	}
 
-	
+	float linearFade = smoothstep(minstep, maxstep, linear_depth);
 	float groundLinearFade = mix(smoothstep(maxTheoreticalStep, maxTheoreticalStep, linear_depth), 1.0, genericData.fogEffectGround);
 
     vec4 color = imageLoad(color_image, uv);
@@ -445,7 +445,7 @@ void main() {
 		}
 	}
 
-	color.rgb = mix(color.rgb, currentAccumilation.rgb, density);
+	color.rgb = mix(color.rgb, currentAccumilation.rgb, density * linearFade);
 	
 
 	
