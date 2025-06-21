@@ -422,8 +422,9 @@ void main() {
 		}
 		traveledDistance = linear_depth;
 	}
-
-	float linearFade = smoothstep(minstep, maxstep, linear_depth);
+	else{
+		density *= smoothstep(minstep, maxstep, linear_depth);
+	}
 	float groundLinearFade = mix(smoothstep(maxTheoreticalStep, maxTheoreticalStep, linear_depth), 1.0, genericData.fogEffectGround);
 
     vec4 color = imageLoad(color_image, uv);
@@ -445,7 +446,7 @@ void main() {
 		}
 	}
 
-	color.rgb = mix(color.rgb, currentAccumilation.rgb, density * linearFade);
+	color.rgb = mix(color.rgb, currentAccumilation.rgb, density);
 	
 
 	
