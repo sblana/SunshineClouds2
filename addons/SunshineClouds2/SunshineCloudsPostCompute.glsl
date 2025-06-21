@@ -182,11 +182,13 @@ vec4 radialBlurColor(vec4 startColor, sampler2D colorImage, sampler2D depthImage
 		for(float i=1.0/Quality; i<=1.0; i+=1.0/Quality)
         {
 			newUV = uv + vec2(cos(d) * blurHorizontal * i, sin(d) * blurVertical * i);
-			float newDepth = texture(depthImage, newUV).g;
-			if (CurrentDepth - newDepth > genericData.max_step_distance){
-				Color += texture2D_bicubic(colorImage, newUV, size);
-				count += 1.0;
-			}
+			Color += texture2D_bicubic(colorImage, newUV, size);
+			count += 1.0;
+			// float newDepth = texture(depthImage, newUV).g;
+			// if (CurrentDepth - newDepth > genericData.max_step_distance){
+			// 	Color += texture2D_bicubic(colorImage, newUV, size);
+			// 	count += 1.0;
+			// }
         }
     }
     Color /= count;
@@ -410,21 +412,24 @@ void main() {
     float traveledDistance = currentColorData.g;
 	float firstTraveledDistance = currentColorData.b;
 
-	
-	if (traveledDistance - linear_depth > maxstep){
-		if (firstTraveledDistance < linear_depth){
+	//bool debugCollisions = false;
+	if (traveledDistance > linear_depth && firstTraveledDistance > linear_depth){
+		//debugCollisions = true;
+		float lerp = 1.0 - clamp(remap(firstTraveledDistance - linear_depth, minstep, maxstep, 0.0, 1.0), 0.0, 1.0);
+		density *= lerp;
+		// float lerp = clamp(remap(linear_depth, firstTraveledDistance, traveledDistance, 0.0, 1.0), 0.0, 1.0);
+		// density *= lerp;
+		// if (firstTraveledDistance < linear_depth){
 
-			float lerp = clamp(remap(linear_depth, firstTraveledDistance, traveledDistance, 0.0, 1.0), 0.0, 1.0);
-			density *= lerp;
-		}
-		else{
-			density = 0.0;
-		}
-		traveledDistance = linear_depth;
+		// 	float lerp = clamp(remap(linear_depth, firstTraveledDistance, traveledDistance, 0.0, 1.0), 0.0, 1.0);
+		// 	density *= lerp;
+		// }
+		// else{
+		// 	density = 0.0;
+		// }
+		// traveledDistance = linear_depth;
 	}
-	else{
-		density *= smoothstep(minstep, maxstep, linear_depth);
-	}
+	density *= smoothstep(minstep, maxstep, linear_depth);
 	float groundLinearFade = mix(smoothstep(maxTheoreticalStep, maxTheoreticalStep, linear_depth), 1.0, genericData.fogEffectGround);
 
     vec4 color = imageLoad(color_image, uv);
@@ -448,7 +453,9 @@ void main() {
 
 	color.rgb = mix(color.rgb, currentAccumilation.rgb, density);
 	
-
+	// if (debugCollisions){
+	// 	color.rgb = vec3(1.0, 0.0, 0.0);
+	// }
 	
     imageStore(color_image, uv, color);
 	if (resolutionScale != 1){
