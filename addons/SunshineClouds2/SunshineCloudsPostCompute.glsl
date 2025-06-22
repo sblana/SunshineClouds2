@@ -169,13 +169,13 @@ vec4 texture2D_bicubic(sampler2D tex, vec2 uv, vec2 res)
                         g1x * texture(tex, p3));
 }
 
-vec4 radialBlurColor(vec4 startColor, sampler2D colorImage, sampler2D depthImage, vec2 uv, vec2 size, float startingDepth, float Directions, float blurVertical, float blurHorizontal, float Quality){
+vec4 radialBlurColor(vec4 startColor, sampler2D colorImage, sampler2D depthImage, vec2 uv, vec2 size, inout float startingDepth, float Directions, float blurVertical, float blurHorizontal, float Quality){
     float Pi = 6.28318530718;
     float count = 1.0;
 	float theoreticalMaxCount =  Directions * Quality;
 	//float stepLerp = 1.0 / theoreticalMaxCount;
     vec4 Color = startColor;
-	float CurrentDepth = startingDepth;
+	//float CurrentDepth = startingDepth;
 	vec2 newUV = uv;
     for( float d=0.0; d<Pi; d+=Pi/Directions)
     {
@@ -184,13 +184,16 @@ vec4 radialBlurColor(vec4 startColor, sampler2D colorImage, sampler2D depthImage
 			newUV = uv + vec2(cos(d) * blurHorizontal * i, sin(d) * blurVertical * i);
 			Color += texture2D_bicubic(colorImage, newUV, size);
 			count += 1.0;
-			// float newDepth = texture(depthImage, newUV).g;
-			// if (CurrentDepth - newDepth > genericData.max_step_distance){
+			//float newDepth = texture(depthImage, newUV).g;
+			startingDepth = max(startingDepth, texture(depthImage, newUV).g);
+			// if (startingDepth - newDepth > genericData.max_step_distance){
+			// 	CurrentDepth = max(CurrentDepth, newDepth);
 			// 	Color += texture2D_bicubic(colorImage, newUV, size);
 			// 	count += 1.0;
 			// }
         }
     }
+	//startingDepth = CurrentDepth
     Color /= count;
     return Color;
 }
@@ -351,7 +354,7 @@ void main() {
     int resolutionScale = int(params.resolutionscale);
     ivec2 size = lowres_size * resolutionScale;
 
-    vec2 depthUV = (vec2(uv) + vec2(1.0)) / vec2(size);
+    vec2 depthUV = (vec2(uv) + vec2(1.0, 0.5)) / vec2(size);
 	depthUV = clamp(depthUV, vec2(0.0), vec2(1.0));
 	float depth = texture(depth_image, depthUV).r;
 	vec4 view = inverse(genericData.proj) * vec4(depthUV*2.0-1.0,depth,1.0);
@@ -403,7 +406,7 @@ void main() {
 		float blurVertical = blurPower / float(size.y);
 		float blurQuality = genericData.blurQuality;
 		//currentColorData = radialBlurData(currentColorData, linear_depth, input_data_image, accumUV, blurQuality * 4.0, blurVertical, blurHorizontal, blurQuality);
-		currentAccumilation = radialBlurColor(currentAccumilation, input_color_image, input_data_image, accumUV, lowres_sizefloat, linear_depth, blurQuality * 4.0, blurVertical, blurHorizontal, blurQuality);
+		currentAccumilation = radialBlurColor(currentAccumilation, input_color_image, input_data_image, accumUV, lowres_sizefloat, currentColorData.g, blurQuality * 4.0, blurVertical, blurHorizontal, blurQuality);
 		
 	}
 
@@ -418,13 +421,14 @@ void main() {
 	if (traveledDistance > linear_depth){
 		
 		if (firstTraveledDistance > linear_depth){
-			lerp = clamp(remap(firstTraveledDistance - linear_depth, minstep, maxstep, 0.0, 1.0), 0.0, 1.0);
+			lerp = clamp(remap(firstTraveledDistance - linear_depth, 0.0, 1.0, 0.0, 1.0), 0.0, 1.0);
 			density *= 1.0 - lerp;
 		}
-		else if(sampledDepth > linear_depth + maxstep){
+		else{
 			//debugCollisions = true;
-			lerp = clamp(remap(linear_depth - firstTraveledDistance, minstep, maxstep, 0.0, 1.0), 0.0, 1.0);
+			lerp = clamp(remap(linear_depth - firstTraveledDistance, 0.0, minstep, 0.0, 1.0), 0.0, 1.0);
 			density *= lerp;
+			//density = 0.0;
 		}
 		// float lerp = clamp(remap(linear_depth, firstTraveledDistance, traveledDistance, 0.0, 1.0), 0.0, 1.0);
 		// density *= lerp;
@@ -463,7 +467,7 @@ void main() {
 	color.rgb = mix(color.rgb, currentAccumilation.rgb, density);
 	
 	if (debugCollisions){
-		color.rgb = vec3(1.0, 0.0, 0.0);
+		color.rgb = vec3(lerp, 0.0, 0.0);
 	}
 	
     imageStore(color_image, uv, color);

@@ -89,7 +89,6 @@ metadata/_custom_type_script = "uid://bxlm4e5qfb7uu"
 
 [node name="SunshineCloudsDriverGD" type="Node" parent="." node_paths=PackedStringArray("tracked_directional_lights", "tracked_point_lights", "tracked_point_effectors")]
 script = ExtResource("3_unbdf")
-update_continuously = true
 clouds_resource = ExtResource("1_nv18y")
 ambience_sample_environment = SubResource("Environment_ftegy")
 tracked_directional_lights = [NodePath("../DirectionalLight3D")]
@@ -101,8 +100,8 @@ extra_large_structures_wind_speed = 1400.0
 large_structures_wind_speed = 1000.0
 medium_structures_wind_speed = 400.0
 small_structures_wind_speed = 120.0
-extra_large_clouds_pos = Vector3(65693.9, 0, 121050)
-large_clouds_pos = Vector3(-19957.8, 0, -22665.5)
-medium_clouds_pos = Vector3(6563.68, 0, -5251.01)
-small_clouds_pos = Vector3(2671.27, -2920.48, 3675.2)
+extra_large_clouds_pos = Vector3(157278, 0, -107374)
+large_clouds_pos = Vector3(45459.5, 0, 42751.5)
+medium_clouds_pos = Vector3(-7667.43, 0, 716.774)
+small_clouds_pos = Vector3(2694.39, -2897.36, 3698.32)
 metadata/_custom_type_script = "uid://djusduuxf0voj"
