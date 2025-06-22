@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://c1jy5gwigpsrl"]
+[gd_scene load_steps=13 format=3 uid="uid://c1jy5gwigpsrl"]
 
 [ext_resource type="CompositorEffect" uid="uid://v0kty216hlxo" path="res://NewCloudsGD.tres" id="1_nv18y"]
 [ext_resource type="Script" uid="uid://bxlm4e5qfb7uu" path="res://addons/SunshineClouds2/SunshineCloudEffector.gd" id="3_afwv5"]
@@ -22,6 +22,10 @@ compositor_effects = Array[CompositorEffect]([ExtResource("1_nv18y")])
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_o8tia"]
 height = 1.0
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_afwv5"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_unbdf"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_o8tia"]
 size = Vector2(10, 10)
@@ -54,6 +58,16 @@ mesh = SubResource("CylinderMesh_o8tia")
 transform = Transform3D(1000, 0, 0, 0, 12000, 0, 0, 0, 1000, 6000, 6000, -60000)
 mesh = SubResource("CylinderMesh_o8tia")
 
+[node name="MeshInstance3D8" type="MeshInstance3D" parent="."]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 4394.9, 12234.6, -78027.6)
+mesh = SubResource("CapsuleMesh_afwv5")
+skeleton = NodePath("../MeshInstance3D5")
+
+[node name="personrefTop" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5942.13, 12000.9, -80331.4)
+mesh = SubResource("CapsuleMesh_unbdf")
+skeleton = NodePath("../MeshInstance3D5")
+
 [node name="MeshInstance3D5" type="MeshInstance3D" parent="."]
 transform = Transform3D(1000, 0, 0, 0, 12000, 0, 0, 0, 1000, 6000, 6000, -80000)
 mesh = SubResource("CylinderMesh_o8tia")
@@ -81,10 +95,10 @@ light_energy = 11.685
 omni_range = 20000.0
 
 [node name="SunshineCloudsEffector" type="Node3D" parent="."]
-transform = Transform3D(0.241651, 0, 0.970363, 0, 1, 0, -0.970363, 0, 0.241651, -7951.21, -2907.13, -14550.1)
+transform = Transform3D(0.241651, 0, 0.970363, 0, 1, 0, -0.970363, 0, 0.241651, -5032.16, 14707.2, -14570)
 script = ExtResource("3_afwv5")
-Radius = 16788.2
-Power = 1.18
+Radius = 50.0
+Power = -1.0
 metadata/_custom_type_script = "uid://bxlm4e5qfb7uu"
 
 [node name="SunshineCloudsDriverGD" type="Node" parent="." node_paths=PackedStringArray("tracked_directional_lights", "tracked_point_lights", "tracked_point_effectors")]
@@ -96,12 +110,8 @@ tracked_directional_light_shadow_steps = Array[int]([32])
 tracked_point_lights = [NodePath("../OmniLight3D")]
 tracked_point_effectors = [NodePath("../SunshineCloudsEffector")]
 origin_offset = Vector3(1000, 0, 0)
-extra_large_structures_wind_speed = 1400.0
-large_structures_wind_speed = 1000.0
-medium_structures_wind_speed = 400.0
-small_structures_wind_speed = 120.0
-extra_large_clouds_pos = Vector3(157278, 0, -107374)
-large_clouds_pos = Vector3(45459.5, 0, 42751.5)
-medium_clouds_pos = Vector3(-7667.43, 0, 716.774)
-small_clouds_pos = Vector3(2694.39, -2897.36, 3698.32)
+extra_large_clouds_pos = Vector3(147225, 0, -116423)
+large_clouds_pos = Vector3(49602.2, 0, 50363.9)
+medium_clouds_pos = Vector3(2696.49, 0, 5447.84)
+small_clouds_pos = Vector3(1055.67, 594.463, 692.769)
 metadata/_custom_type_script = "uid://djusduuxf0voj"

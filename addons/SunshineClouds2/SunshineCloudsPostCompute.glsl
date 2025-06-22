@@ -46,7 +46,7 @@ layout(binding = 5) uniform uniformBuffer {
 	float cloud_floor;
 	float cloud_ceiling;
 	float max_step_count;
-	float max_lighting_step_count;
+	float max_quality_step_count;
 
 	float filterIndex;
 	float blurPower;
@@ -442,7 +442,7 @@ void main() {
 		// }
 		// traveledDistance = linear_depth;
 	}
-	density *= smoothstep(minstep, maxstep, linear_depth);
+	density *= smoothstep(0.0, minstep, linear_depth);
 	float groundLinearFade = mix(smoothstep(maxTheoreticalStep, maxTheoreticalStep, linear_depth), 1.0, genericData.fogEffectGround);
 
     vec4 color = imageLoad(color_image, uv);

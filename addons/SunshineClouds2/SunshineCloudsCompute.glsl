@@ -59,7 +59,7 @@ layout(binding = 14) uniform uniformBuffer {
 	float cloud_floor;
 	float cloud_ceiling;
 	float max_step_count;
-	float max_lighting_step_count;
+	float max_quality_step_count;
 
 	float filterIndex;
 	float blurPower;
@@ -247,7 +247,7 @@ float sampleScene(
 
 	float shape = mediumshape + max(effectorAdditive, 0.0);
 	shape = clamp(remap(shape, 1.0 - largeShape, 1.0, 0.0, 1.0), 0.0, 1.0);
-	shape = clamp(remap(shape, smallShape, 1.0, 0.0, 1.0), 0.0, 1.0);
+	shape = clamp(remap(shape, smallShape , 1.0, 0.0, 1.0), 0.0, 1.0);
 	shape += min(effectorAdditive, 0.0);
 
 	return clamp((shape * edgeFade), 0.0, 1.0);
@@ -289,7 +289,7 @@ float sampleLighting(
 	float count = 0.0;
 	vec3 curPos = worldPosition;
 	for (float i = 0.0; i < stepCountFloat; i++) {
-		traveledDistance = mix(eachShortStep, actualDistance, clamp(quadraticOut(i / stepCountFloat), 0.0, 1.0));
+		traveledDistance = mix(eachShortStep, actualDistance, clamp(i / stepCountFloat, 0.0, 1.0));
 		curPos = worldPosition + sunDirection * traveledDistance;
 
 		if (density < 1.0 && clamp(curPos.y, cloudfloor, cloudceiling) == curPos.y){
@@ -421,7 +421,9 @@ void main() {
 
 	//IMPORTED DATA
 	int stepCount = int(genericData.max_step_count);
-	int lightingStepCount = int(genericData.max_lighting_step_count);
+	float floatStepCount = float(stepCount);
+	float QualityStepStart = float(genericData.max_quality_step_count);
+	float QualityStepFalloff = QualityStepStart + (QualityStepStart * 0.5);
 	int directionalLightCount = int(genericData.directionalLightsCount);
 	int pointLightCount = int(genericData.pointLightsCount);
 
@@ -471,7 +473,7 @@ void main() {
 	float halfCeiling = cloudceiling - halfcloudThickness;
 	
 
-	float newStep = maxstep * ditherValue;
+	float newStep = minstep * ditherValue;
 	float traveledDistance = newStep;
 
 	vec4 currentColorAccumilation = vec4(0.0);
@@ -613,7 +615,7 @@ void main() {
 		}
 	}
 
-	for (int i = 0; i < stepCount; i++) {
+	for (float i = 0.0; i < floatStepCount; i++) {
 		
 		if (traveledDistance > linear_depth){
 			depthFade = 1.0 - smoothstep(linear_depth - newStep, linear_depth, traveledDistance);
@@ -632,7 +634,10 @@ void main() {
 			curLod = 1.0 - clamp(traveledDistance / lodMaxDistance, 0.0, 1.0);
 			newdensity = pow(sampleScene(largeNoisePos, mediumNoisePos, smallNoisePos, curPos, ceilingSample, cloudfloor, maskSample.a, largenoiseScale, mediumnoiseScale, smallnoiseScale, coverage, smallNoiseMultiplier, curlPower, curLod, false) * densityMultiplier, sharpness) * depthFade;
 			
-			
+			float stepBlend = smoothstep(QualityStepStart, QualityStepFalloff, i);
+			float stepadditive = min(smoothstep(QualityStepFalloff, QualityStepStart, i), stepBlend);
+			traveledDistance += maxstep * ditherValue * stepadditive;
+			newStep = mix(minstep, maxstep, stepBlend);
 			
 			if (newdensity > 0.0){
 				if (initialdistanceSample < 0.0){
@@ -649,7 +654,7 @@ void main() {
 						vec3 sundir = directionalLights[lightI].direction.xyz;
 						float sunUpWeight = directionalLightSunUpPower[lightI].r;
 
-						int thislightingStepCount = min(int(directionalLights[lightI].direction.w), lightingStepCount);
+						int thislightingStepCount = int(directionalLights[lightI].direction.w);
 						if (thislightingStepCount > 0){
 							float henyeygreenstein =  pow(HenyeyGreenstein(genericData.anisotropy, directionalLightSunUpPower[lightI].b), mix(1.0, 2.0, 1.0 - genericData.anisotropy)); 
 							float densitySample = sampleLighting(thislightingStepCount, curPos, extralargeNoisePos, largeNoisePos, mediumNoisePos, smallNoisePos, sundir, densityMultiplier * lightingdensityMultiplier, sunUpWeight, lightingStepDistance, ceilingSample, cloudfloor, extralargenoiseScale, largenoiseScale, mediumnoiseScale, smallnoiseScale, coverage, smallNoiseMultiplier, curlPower, curLod);
@@ -690,23 +695,33 @@ void main() {
 				}
 				
 				if (aobase.a > 0.0){
-					ambient += sampleScene(largeNoisePos, mediumNoisePos, smallNoisePos, curPos + vec3(0.0, 1.0, 0.0) * minstep, ceilingSample, cloudfloor, maskSample.a, largenoiseScale, mediumnoiseScale, smallnoiseScale, coverage, smallNoiseMultiplier, curlPower, curLod, true) * densityMultiplier * lightingdensityMultiplier ;
+					ambient += sampleScene(largeNoisePos, mediumNoisePos, smallNoisePos, curPos + vec3(0.0, 1.0, 0.0) * newStep, ceilingSample, cloudfloor, maskSample.a, largenoiseScale, mediumnoiseScale, smallnoiseScale, coverage, smallNoiseMultiplier, curlPower, curLod, true) * densityMultiplier * lightingdensityMultiplier ;
 				}
 
 				
-				newStep = mix(mix(maxstep, minstep, pow(newdensity, 0.1)), maxstep, float(i) / float(stepCount));
+				//newStep = mix(mix(maxstep, minstep, pow(newdensity, 0.1)), maxstep, float(i) / float(stepCount));
 				if (newdensity > highestDensity){
 					highestDensity = newdensity;
 					highestDensityDistance = traveledDistance;
 				}
 			}
-			else{
-				newStep = maxstep;
-			}
 
-			if (i == 0){
-				newdensity = mix(newdensity, 0.0, clamp(traveledDistance / maxstep, 0.0, 1.0));
-			}
+			// if (i < 32.0){
+			// 	newStep = minstep;
+			// }
+			// else{
+			// 	if (i == 32.0){
+			// 		traveledDistance += maxstep * ditherValue;
+			// 	}
+			// 	newStep = mix(maxstep, minstep, pow(newdensity, 0.1));
+			// }
+			// else{
+			// 	newStep = maxstep;
+			// }
+
+			// if (i == 0.0){
+			// 	newdensity = mix(newdensity, 0.0, clamp(traveledDistance / maxstep, 0.0, 1.0));
+			// }
 
 			density += newdensity;
 			if (density >= 1.0){

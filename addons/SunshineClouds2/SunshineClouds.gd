@@ -38,7 +38,7 @@ class_name SunshineCloudsGD
 
 @export_subgroup("Performance")
 @export var max_step_count : float = 50
-@export var max_lighting_steps : float = 32
+
 @export_enum("Native","Half","Quarter","Eighth") var resolution_scale = 0:
 	get:
 		return resolution_scale
@@ -46,6 +46,7 @@ class_name SunshineCloudsGD
 		resolution_scale = value
 		last_size = Vector2i(0, 0)
 		lights_updated = true
+@export var high_quality_step_count : float = 32
 @export_range(0, 2) var lod_bias : float = 1.0
 
 @export_subgroup("Noise Textures")
@@ -872,7 +873,7 @@ func update_matrices(camera_tr, view_proj):
 	general_data.encode_float(idx, cloud_floor); idx += 4
 	general_data.encode_float(idx, cloud_ceiling); idx += 4
 	general_data.encode_float(idx, float(max_step_count)); idx += 4
-	general_data.encode_float(idx, float(max_lighting_steps)); idx += 4
+	general_data.encode_float(idx, float(high_quality_step_count)); idx += 4
 
 	general_data.encode_float(idx, float(filter_index)); idx += 4
 	general_data.encode_float(idx, float(blur_power)); idx += 4
