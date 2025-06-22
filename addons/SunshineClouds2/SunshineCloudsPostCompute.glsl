@@ -354,7 +354,7 @@ void main() {
     int resolutionScale = int(params.resolutionscale);
     ivec2 size = lowres_size * resolutionScale;
 
-    vec2 depthUV = (vec2(uv) + vec2(1.0, 0.5)) / vec2(size);
+    vec2 depthUV = (vec2(uv) + vec2(1.0, 0.0)) / vec2(size);
 	depthUV = clamp(depthUV, vec2(0.0), vec2(1.0));
 	float depth = texture(depth_image, depthUV).r;
 	vec4 view = inverse(genericData.proj) * vec4(depthUV*2.0-1.0,depth,1.0);
