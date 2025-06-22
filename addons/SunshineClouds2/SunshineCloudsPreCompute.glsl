@@ -19,8 +19,8 @@ void main() {
 
     int resolutionScale = int(params.resolutionscale);
     int adjustedScale = resolutionScale * 2;
-    int halfScale = int(float(adjustedScale) * 0.5);
-    ivec2 starting_uv = ivec2(vec2(base_uv) * float(resolutionScale)) - halfScale;
+    int halfScale = int(floor(float(adjustedScale) * 0.5));
+    ivec2 starting_uv = ivec2(floor(vec2(base_uv) * float(resolutionScale)));
     ivec2 current_uv = starting_uv;
 
     vec2 depthUV = vec2(0.0);
@@ -33,7 +33,7 @@ void main() {
                 continue;
             }
 
-            depthUV = vec2(float(current_uv.x) / float(size.x), float(current_uv.y) / float(size.y));
+            depthUV = vec2((float(current_uv.x) + 0.5) / float(size.x), (float(current_uv.y) + 0.5) / float(size.y));
 
             furthestDepth = min(texture(depth_image, depthUV).r, furthestDepth);
         }

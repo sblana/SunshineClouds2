@@ -351,7 +351,7 @@ void main() {
     int resolutionScale = int(params.resolutionscale);
     ivec2 size = lowres_size * resolutionScale;
 
-    vec2 depthUV = vec2(float(uv.x) / float(size.x), float(uv.y) / float(size.y));
+    vec2 depthUV = (vec2(uv) + vec2(1.0)) / vec2(size);
 	depthUV = clamp(depthUV, vec2(0.0), vec2(1.0));
 	float depth = texture(depth_image, depthUV).r;
 	vec4 view = inverse(genericData.proj) * vec4(depthUV*2.0-1.0,depth,1.0);
@@ -373,7 +373,7 @@ void main() {
 	vec3 rayOrigin = genericData.view[3].xyz; //center of camera for the ray origin, not worried about the screen width playing in, as it's for clouds.
 
 
-	vec2 tempuv = vec2(uv) + vec2(resolutionScale) * 2.0;
+	vec2 tempuv = vec2(uv);
 	vec2 accumUV = vec2(tempuv.x / float(size.x), tempuv.y / float(size.y));
 	accumUV = clamp(accumUV, vec2(0.0), vec2(1.0));
 	

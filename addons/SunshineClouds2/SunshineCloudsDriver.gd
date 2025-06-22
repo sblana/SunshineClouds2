@@ -71,11 +71,17 @@ var _small_clouds_domain: float = 0.0
 var _updating_settings: bool = false
 
 func _ready():
+	
 	if update_continuously:
+		
 		if clouds_resource == null:
 			update_continuously = false
 			return
 		call_deferred("retrieve_texture_data")
+
+func _exit_tree() -> void:
+	if (clouds_resource != null):
+		clouds_resource.enabled = false
 
 func _process(delta : float):
 	if clouds_resource != null:
