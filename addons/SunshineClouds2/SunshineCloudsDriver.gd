@@ -79,9 +79,6 @@ func _ready():
 			return
 		call_deferred("retrieve_texture_data")
 
-func _exit_tree() -> void:
-	if (clouds_resource != null):
-		clouds_resource.enabled = false
 
 func _process(delta : float):
 	if clouds_resource != null:
