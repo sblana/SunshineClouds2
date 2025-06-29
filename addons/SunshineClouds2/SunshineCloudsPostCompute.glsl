@@ -412,7 +412,7 @@ void main() {
 
 
     float density = clamp(currentAccumilation.a, 0.0, 1.0);
-    float sampledDepth = currentColorData.r;
+    //float sampledDepth = currentColorData.r;
 	float traveledDistance = currentColorData.g;
 	float firstTraveledDistance = currentColorData.b;
 
@@ -443,29 +443,44 @@ void main() {
 		// traveledDistance = linear_depth;
 	}
 	density *= smoothstep(minstep, maxstep, linear_depth);
-	float groundLinearFade = mix(smoothstep(maxTheoreticalStep, maxTheoreticalStep, linear_depth), 1.0, genericData.fogEffectGround);
+	//float groundLinearFade = mix(smoothstep(maxTheoreticalStep, maxTheoreticalStep, linear_depth), 1.0, genericData.fogEffectGround);
 
     vec4 color = imageLoad(color_image, uv);
+	
 
 	vec3 ambientfogdistancecolor = genericData.ambientfogdistancecolor.rgb * genericData.ambientfogdistancecolor.a;
-    float atmosphericDensity = genericData.atmospheric_density;
+    float atmosphericDensity = genericData.atmospheric_density * 0.5;
 	float directionalLightCount = genericData.directionalLightsCount;
-	if (directionalLightCount > 0.0){
-		for (float i = 0.0; i < directionalLightCount; i++){
-			DirectionalLight light = directionalLights[int(i)];
-			vec3 sundir = light.direction.xyz;
-			//sampleColor = sundir;
-			float sunUpWeight = smoothstep(0.0, 0.4, dot(sundir, vec3(0.0, 1.0, 0.0)));
-			float lightPower = light.color.a * sunUpWeight;
-			if (lightPower > 0.0){
-				vec4 atmosphericData = sampleAllAtmospherics(rayOrigin, raydirection, linear_depth, traveledDistance, 0.0, linear_depth / 10.0, 10.0, atmosphericDensity, sundir, light.color.rgb * lightPower, ambientfogdistancecolor);
-				color.rgb = mix(color.rgb, atmosphericData.rgb, atmosphericData.a * groundLinearFade); //causes jitter in the sky
-			}
-		}
-	}
+	
+	float altitudeSample = smoothstep(0.0, genericData.cloud_ceiling - genericData.cloud_floor, genericData.cloud_ceiling - rayOrigin.y);
+
+	float horizonDot = 1.0 - smoothstep(0.0, altitudeSample * atmosphericDensity, dot(raydirection, vec3(0.0, 1.0, 0.0)));
+	//horizonDot = horizonDot * (min(traveledDistance, linear_depth) / maxTheoreticalStep);
+	currentAccumilation.rgb = mix(currentAccumilation.rgb, ambientfogdistancecolor, clamp(horizonDot * (traveledDistance / maxTheoreticalStep) * atmosphericDensity, 0.0, 1.0));
+	color.rgb = mix(color.rgb, ambientfogdistancecolor, clamp(horizonDot * (linear_depth / maxTheoreticalStep) * atmosphericDensity, 0.0, 1.0));
 
 	color.rgb = mix(color.rgb, currentAccumilation.rgb, density);
 	
+	// if (directionalLightCount > 0.0){
+	// 	for (float i = 0.0; i < directionalLightCount; i++){
+	// 		DirectionalLight light = directionalLights[int(i)];
+	// 		vec3 sundir = light.direction.xyz;
+	// 		//sampleColor = sundir;
+	// 		float sunUpWeight = smoothstep(0.0, 0.4, dot(sundir, vec3(0.0, 1.0, 0.0)));
+	// 		float lightPower = light.color.a * sunUpWeight;
+	// 		if (lightPower > 0.0){
+	// 			float lightResult = smoothstep(0.8,1.0,dot(sundir, raydirection));
+	// 			color.rgb = mix(color.rgb, light.color.rgb * lightPower, lightResult * horizonDot * (1.0 - density));
+	// 			// vec4 atmosphericData = sampleAllAtmospherics(rayOrigin, raydirection, linear_depth, traveledDistance, 0.0, linear_depth / 10.0, 10.0, atmosphericDensity, sundir, light.color.rgb * lightPower, ambientfogdistancecolor);
+	// 			// color.rgb = mix(color.rgb, atmosphericData.rgb, atmosphericData.a * groundLinearFade); //causes jitter in the sky
+	// 		}
+	// 	}
+	// }
+
+	
+	
+	
+
 	if (debugCollisions){
 		color.rgb = vec3(lerp, 0.0, 0.0);
 	}

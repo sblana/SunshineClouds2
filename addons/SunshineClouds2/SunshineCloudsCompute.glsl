@@ -455,7 +455,7 @@ void main() {
 	vec4 aobase = genericData.ambientGroundLightColor;
 	
 	//bool debugCollisions = false;
-	//int frameIndex = int(genericData.filterIndex);
+	int frameIndex = int(genericData.filterIndex);
 	
 	//REUSABLE VARIABLES
 	bool override = false;
@@ -477,101 +477,103 @@ void main() {
 	vec4 currentColorAccumilation = vec4(0.0);
 	vec4 currentDataAccumilation = vec4(0.0);
 
+	vec3 curPos = vec3(0.0);
+		
 
 
 
 	//Used for interlaced rendering, not currently enabled due to it's long accumilation time, results in a lot of noticable artifacts.
 	//Though it does improve performance, so maybe for some people it will be helpful.
 
-				//bool rebuildFrame = renderBayer(uv, frameIndex);
-				// bool rebuildFrame = true;
+	// bool rebuildFrame = renderBayer(uv, frameIndex);
+	// //bool rebuildFrame = true;
+	
+	// if (!rebuildFrame){
+	// 	//accumulation preperation:
+	// 	vec4 niaveDataRetreval = vec4(0.0);
+	// 	float usingaccumA = params.cameraRotation.x;
+	// 	if (usingaccumA > 0.0){
+	// 		niaveDataRetreval = imageLoad(accum_2A_image, uv).rgba;
+	// 	}
+	// 	else{
+	// 		niaveDataRetreval = imageLoad(accum_2B_image, uv).rgba;
+	// 	}
+	// 	//depthBreak = niaveDataRetreval.r > linear_depth;
+
+	// 	vec3 worldFinalPos = curPos + raydirection * ((niaveDataRetreval.g + niaveDataRetreval.b) * 0.5);
+	// 	worldFinalPos += (rayOrigin - genericData.prevview[3].xyz);
+	// 	//Prevview is already actually the inv_view (due to the way retrieving the transform works), so inversing it here is making it the equalivant of View_Matrix.
+	// 	vec4 reprojectedClipPos = inverse(genericData.prevview) * vec4(worldFinalPos, 1.0);
+		
+		
+	// 	if (reprojectedClipPos.z > 0.0){
+	// 		override = true;
+	// 	}
+	// 	else{
+	// 		vec4 reprojectedScreenPos = genericData.prevproj * reprojectedClipPos;
+			
+	// 		// Convert clip space to normalized device coordinates
+	// 		ndc = (reprojectedScreenPos.xy / reprojectedScreenPos.w);
+
+	// 		// Convert normalized device coordinates to screen space
+	// 		vec2 screen_position = ndc * 0.5 + 0.5;
+	// 		//screen_position = clamp(screen_position, vec2(0.0), vec2(1.0));
+	// 		screen_position = screen_position - depthUV;
+	// 		ivec2 adjustedUV = ivec2(int(screen_position.x * size.x), int(screen_position.y * size.y));
+	// 		//float change = length(vec2(adjustedUV));
+	// 		adjustedUV += uv; //Size is the screen resolution.
+			
+	// 		ivec2 clampedUV = clamp(adjustedUV, ivec2(0), size - ivec2(1)); //having two lets me check if clamping it changed the reprojected uv, if it did that means it was offscreen, so rebuild data.
+
+	// 		//execute accumilation.
+	// 		float accumdecay = params.accumilation_decay;
+
+	// 		//alternate back and forth to avoid stepping on pixels being written too.
+			
+	// 		float actualDepth = abs(reprojectedClipPos.z);
+			
+	// 		if (usingaccumA > 0.0){
+	// 			currentDataAccumilation = imageLoad(accum_2A_image, adjustedUV).rgba;
+	// 			bool lastDepthBreak = currentDataAccumilation.a < 0.0;
+	// 			float sampledDepth = currentDataAccumilation.r;
+	// 			depthBreak = actualDepth > sampledDepth;
+	// 			if (clampedUV != adjustedUV || depthBreak != lastDepthBreak){
+	// 				override = true;
+	// 				//debugCollisions = true;
+	// 			}
+	// 			else{
+	// 				imageStore(accum_1B_image, uv, imageLoad(accum_1A_image, adjustedUV));
+	// 				imageStore(accum_2B_image, uv, currentDataAccumilation);
+	// 			}
 				
-				// if (!rebuildFrame){
-				// 	//accumulation preperation:
-				// 	vec4 niaveDataRetreval = vec4(0.0);
-				// 	float usingaccumA = params.cameraRotation.x;
-				// 	if (usingaccumA > 0.0){
-				// 		niaveDataRetreval = imageLoad(accum_2A_image, uv).rgba;
-				// 	}
-				// 	else{
-				// 		niaveDataRetreval = imageLoad(accum_2B_image, uv).rgba;
-				// 	}
-				// 	//depthBreak = niaveDataRetreval.r > linear_depth;
+	// 		}
+	// 		else{
+	// 			currentDataAccumilation = imageLoad(accum_2B_image, adjustedUV).rgba;
+	// 			bool lastDepthBreak = currentDataAccumilation.a < 0.0;
+	// 			float sampledDepth = abs(currentDataAccumilation.r);
+	// 			depthBreak = actualDepth > sampledDepth;
+	// 			if (clampedUV != adjustedUV || depthBreak != lastDepthBreak){
+	// 				override = true;
+	// 				//debugCollisions = true;
+	// 			}
+	// 			else{
+	// 				imageStore(accum_1A_image, uv, imageLoad(accum_1B_image, adjustedUV));
+	// 				imageStore(accum_2A_image, uv, currentDataAccumilation);
 
-				// 	vec3 worldFinalPos = curPos + raydirection * niaveDataRetreval.g;
-				// 	worldFinalPos += (rayOrigin - genericData.prevview[3].xyz);
-				// 	//Prevview is already actually the inv_view (due to the way retrieving the transform works), so inversing it here is making it the equalivant of View_Matrix.
-				// 	vec4 reprojectedClipPos = inverse(genericData.prevview) * vec4(worldFinalPos, 1.0);
-					
-					
-				// 	if (reprojectedClipPos.z > 0.0){
-				// 		override = true;
-				// 	}
-				// 	else{
-				// 		vec4 reprojectedScreenPos = genericData.prevproj * reprojectedClipPos;
-						
-				// 		// Convert clip space to normalized device coordinates
-				// 		ndc = (reprojectedScreenPos.xy / reprojectedScreenPos.w);
+	// 			}
+	// 		}
+	// 	}
 
-				// 		// Convert normalized device coordinates to screen space
-				// 		vec2 screen_position = ndc * 0.5 + 0.5;
-				// 		//screen_position = clamp(screen_position, vec2(0.0), vec2(1.0));
-				// 		screen_position = screen_position - depthUV;
-				// 		ivec2 adjustedUV = ivec2(int(screen_position.x * size.x), int(screen_position.y * size.y));
-				// 		//float change = length(vec2(adjustedUV));
-				// 		adjustedUV += uv; //Size is the screen resolution.
-						
-				// 		ivec2 clampedUV = clamp(adjustedUV, ivec2(0), size - ivec2(1)); //having two lets me check if clamping it changed the reprojected uv, if it did that means it was offscreen, so rebuild data.
-
-				// 		//execute accumilation.
-				// 		float accumdecay = params.accumilation_decay;
-
-				// 		//alternate back and forth to avoid stepping on pixels being written too.
-						
-				// 		float actualDepth = abs(reprojectedClipPos.z);
-						
-				// 		if (usingaccumA > 0.0){
-				// 			currentDataAccumilation = imageLoad(accum_2A_image, adjustedUV).rgba;
-				// 			bool lastDepthBreak = currentDataAccumilation.a < 0.0;
-				// 			float sampledDepth = currentDataAccumilation.r;
-				// 			depthBreak = actualDepth > sampledDepth;
-				// 			if (clampedUV != adjustedUV || depthBreak != lastDepthBreak){
-				// 				override = true;
-				// 				//debugCollisions = true;
-				// 			}
-				// 			else{
-				// 				imageStore(accum_1B_image, uv, imageLoad(accum_1A_image, adjustedUV));
-				// 				imageStore(accum_2B_image, uv, currentDataAccumilation);
-				// 			}
-							
-				// 		}
-				// 		else{
-				// 			currentDataAccumilation = imageLoad(accum_2B_image, adjustedUV).rgba;
-				// 			bool lastDepthBreak = currentDataAccumilation.a < 0.0;
-				// 			float sampledDepth = abs(currentDataAccumilation.r);
-				// 			depthBreak = actualDepth > sampledDepth;
-				// 			if (clampedUV != adjustedUV || depthBreak != lastDepthBreak){
-				// 				override = true;
-				// 				//debugCollisions = true;
-				// 			}
-				// 			else{
-				// 				imageStore(accum_1A_image, uv, imageLoad(accum_1B_image, adjustedUV));
-				// 				imageStore(accum_2A_image, uv, currentDataAccumilation);
-
-				// 			}
-				// 		}
-				// 	}
-
-				// }
-				
+	// }
+	
 	// END INTERLACED RENDERING
 
 
 	
 	//if (rebuildFrame || override){ //Re-enable for interlaced rendering
 	//If it is our render, build the data for this pixel
-	
-	
+		
+		
 	vec3 directionalLightSunUpPower[4] = vec3[4](vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));
 	float totalLightPower = 0.0;
 
@@ -598,7 +600,6 @@ void main() {
 	float ambient = 0.0;
 	float depthFade = 1.0;
 	float newdensity = 0.0;
-	vec3 curPos = vec3(0.0);
 	
 	float curLod = 1.0;
 	float samplePosCount = genericData.samplePointsCount;
@@ -745,31 +746,31 @@ void main() {
 	lightColor.a = density;
 
 
-	for (int lightI = 0; lightI < directionalLightCount; lightI++){
-		if (directionalLights[lightI].color.a > 0.0){
-			float sunUpWeight = clamp(directionalLightSunUpPower[lightI].r / lightingSamples, 0.0, 1.0);
-			float sunAOPower = clamp(directionalLightSunUpPower[lightI].g / lightingSamples, 0.0, 1.0);
-			float mu = dot(raydirection, directionalLights[lightI].direction.xyz);
+	// for (int lightI = 0; lightI < directionalLightCount; lightI++){
+	// 	if (directionalLights[lightI].color.a > 0.0){
+	// 		float sunUpWeight = clamp(directionalLightSunUpPower[lightI].r / lightingSamples, 0.0, 1.0);
+	// 		float sunAOPower = clamp(directionalLightSunUpPower[lightI].g / lightingSamples, 0.0, 1.0);
+	// 		float mu = dot(raydirection, directionalLights[lightI].direction.xyz);
 			
 
-			float mumu = mu * mu;
-			float gg = MieprefferedDirection * MieprefferedDirection;
-			float pRlh = 3.0 / (16.0 * PI) * (1.0 + mumu);
-			float pMie = 3.0 / (8.0 * PI) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * MieprefferedDirection, 1.5) * (2.0 + gg));
+	// 		float mumu = mu * mu;
+	// 		float gg = MieprefferedDirection * MieprefferedDirection;
+	// 		float pRlh = 3.0 / (16.0 * PI) * (1.0 + mumu);
+	// 		float pMie = 3.0 / (8.0 * PI) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * MieprefferedDirection, 1.5) * (2.0 + gg));
 
-			float AtmosphericsDistancePower = length(vec3(RayleighScatteringCoef * totalRlh + MieScatteringCoef * totalMie));
-			vec3 atmospherics = 22.0 * (ambientfogdistancecolor * RayleighScatteringCoef * totalRlh + pMie * MieScatteringCoef * (directionalLights[lightI].color.rgb * sunAOPower) * totalMie);
+	// 		float AtmosphericsDistancePower = length(vec3(RayleighScatteringCoef * totalRlh + MieScatteringCoef * totalMie));
+	// 		vec3 atmospherics = 22.0 * (ambientfogdistancecolor * RayleighScatteringCoef * totalRlh + pMie * MieScatteringCoef * (directionalLights[lightI].color.rgb * sunAOPower) * totalMie);
 
-			lightColor.rgb = mix(lightColor.rgb, atmospherics, (AtmosphericsDistancePower * sunUpWeight)); //causes jitter in the sky
-		}
-	}
+	// 		lightColor.rgb = mix(lightColor.rgb, atmospherics, (AtmosphericsDistancePower * sunUpWeight)); //causes jitter in the sky
+	// 	}
+	// }
 
 	initialdistanceSample = max(initialdistanceSample, 0.0);
 
 
 	//accumulation preperation:
 	float finalDensityDistance = min(traveledDistance, highestDensityDistance);
-	vec3 worldFinalPos = rayOrigin + raydirection * (highestDensityDistance + maxstep);
+	vec3 worldFinalPos = rayOrigin + raydirection * ((highestDensityDistance + initialdistanceSample) * 0.5);
 	vec3 delta = rayOrigin - genericData.prevview[3].xyz;
 	worldFinalPos += delta;
 

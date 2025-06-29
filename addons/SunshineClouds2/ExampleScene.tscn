@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://c1jy5gwigpsrl"]
+[gd_scene load_steps=13 format=3 uid="uid://c1jy5gwigpsrl"]
 
 [ext_resource type="CompositorEffect" uid="uid://v0kty216hlxo" path="res://NewCloudsGD.tres" id="1_nv18y"]
 [ext_resource type="Script" uid="uid://bxlm4e5qfb7uu" path="res://addons/SunshineClouds2/SunshineCloudEffector.gd" id="3_afwv5"]
@@ -23,6 +23,11 @@ compositor_effects = Array[CompositorEffect]([ExtResource("1_nv18y")])
 [sub_resource type="CylinderMesh" id="CylinderMesh_o8tia"]
 height = 1.0
 
+[sub_resource type="PlaneMesh" id="PlaneMesh_nv18y"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_afwv5"]
+albedo_color = Color(0.219078, 0.308223, 0.269826, 1)
+
 [sub_resource type="PlaneMesh" id="PlaneMesh_o8tia"]
 size = Vector2(10, 10)
 
@@ -41,6 +46,11 @@ shadow_enabled = true
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 transform = Transform3D(1000, 0, 0, 0, 12000, 0, 0, 0, 1000, 6000, 6000, 0)
 mesh = SubResource("CylinderMesh_o8tia")
+
+[node name="MeshInstance3D8" type="MeshInstance3D" parent="."]
+transform = Transform3D(100000, 0, 0, 0, 1, 0, 0, 0, 100000, 0, 0, 0)
+mesh = SubResource("PlaneMesh_nv18y")
+surface_material_override/0 = SubResource("StandardMaterial3D_afwv5")
 
 [node name="MeshInstance3D2" type="MeshInstance3D" parent="."]
 transform = Transform3D(1000, 0, 0, 0, 12000, 0, 0, 0, 1000, 6000, 6000, -40000)
