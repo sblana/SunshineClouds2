@@ -1,0 +1,355 @@
+layout(set = 0, binding = 0, rgba16f) uniform image2D output_data_image;
+layout(set = 0, binding = 1, rgba16f) uniform image2D output_color_image;
+
+layout(set = 0, binding = 2, rgba16f) uniform image2D accum_1A_image;
+layout(set = 0, binding = 3, rgba16f) uniform image2D accum_1B_image;
+
+layout(set = 0, binding = 4, rgba16f) uniform image2D accum_2A_image;
+layout(set = 0, binding = 5, rgba16f) uniform image2D accum_2B_image;
+
+layout(set = 0, binding = 6) uniform sampler2D depth_image;
+layout(set = 0, binding = 7) uniform sampler2D extra_large_noise;
+layout(set = 0, binding = 8) uniform sampler3D large_noise;
+layout(set = 0, binding = 9) uniform sampler3D noise_medium;
+layout(set = 0, binding = 10) uniform sampler3D noise_small;
+layout(set = 0, binding = 11) uniform sampler3D curl_noise;
+layout(set = 0, binding = 12) uniform sampler3D dither_small;
+layout(set = 0, binding = 13) uniform sampler2D heightmask;
+
+layout(set = 0, binding = 14) uniform uniformBuffer {
+	mat4 view;
+	mat4 prevview;
+	mat4 proj;
+	mat4 prevproj;
+
+	vec3 extralargenoiseposition;
+	float extralargenoisescale;
+
+	vec3 largenoiseposition;
+	float cloud_lighting_sharpness;
+
+	vec3 mediumnoiseposition;
+	float lighting_step_distance;
+
+	vec3 smallnoiseposition;
+	float atmospheric_density;
+
+	vec4 ambientLightColor;
+	vec4 ambientGroundLightColor;
+	vec4 ambientfogdistancecolor;
+	
+	float small_noise_scale;
+	float min_step_distance;
+	float max_step_distance;
+	float lod_bias;
+
+	float cloud_sharpness;
+	float directionalLightsCount;
+	float powderStrength;
+	float anisotropy;
+
+	float cloud_floor;
+	float cloud_ceiling;
+	float max_step_count;
+	float max_lighting_step_count;
+
+	float filterIndex;
+	float blurPower;
+	float blurQuality;
+	float curlPower;
+
+	vec2 WindDirection;
+	float fogEffectGround;
+	float samplePointsCount;
+
+	float pointLightsCount;
+	float pointEffectorCount;
+	float windSweptRange;
+	float windSweptPower;
+} genericData;
+
+struct DirectionalLight {
+	vec4 direction; //w = shadow sample count
+	vec4 color; //a = intensity
+};
+
+struct PointLight {
+	vec4 position; //w = radius
+	vec4 color; //a = intensity
+};
+
+struct PointEffector {
+	vec3 position; //w = radius
+	float radius;
+
+	float power;
+	float attenuation;
+	vec2 reserved;
+};
+
+layout(set = 0, binding = 15) uniform LightsBuffer {
+	DirectionalLight directionalLights[4];
+	PointLight pointLights[128];
+	PointEffector pointEffectors[64];
+};
+
+layout(set = 0, binding = 16, std430) restrict buffer SamplePointsBuffer {
+	vec4 SamplePoints[32];
+};
+
+// Our push constant
+layout(push_constant, std430) uniform Params {
+	vec2 raster_size;
+	float large_noise_scale;
+	float medium_noise_scale;
+
+	float time;
+	float cloud_coverage;
+	float cloud_density;
+	float small_noise_strength;
+
+	float cloud_lighting_power;
+	float accumilation_decay;
+	vec2 cameraRotation;
+} params;
+
+// layout(rgba16f, set = 0, binding = 1) uniform image2D output_color_image;
+// // layout(set = 0, binding = 7) uniform sampler2D extra_large_noise;
+// layout(set = 0, binding = 8) uniform sampler3D large_noise;
+// // layout(set = 0, binding = 9) uniform sampler3D medium_noise;
+// // layout(set = 0, binding = 10) uniform sampler3D small_noise;
+
+// layout(set = 0, binding = 14) uniform settingsBuffer {
+// 	GenericData data;
+// } settings_buffer;
+
+
+#define TreeNodeIdx_t uint
+
+struct TreeNodeData {
+	TreeNodeIdx_t child_nodes_start_idx;
+	TreeNodeIdx_t parent_node_idx;
+	bool is_leaf_node;
+
+	float data;
+};
+
+TreeNodeData tree_node_data_init() {
+	return TreeNodeData(0, 0, false, 0.0);
+}
+
+#define TREE_NUM_MAX_LAYERS (7)
+#define TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X (2)
+#define TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Y (2)
+#define TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Z (2)
+#define TREE_NUM_DIVISIONS_PER_NODE uvec3(TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X, TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Y, TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Z)
+#define TREE_NUM_CHILDREN_PER_NODE (TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X * TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Y * TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Z)
+// todo: figure out how many maximum nodes we can actually have
+// #define TREE_MAX_NODES (TREE_NUM_CHILDREN_PER_NODE^TREE_NUM_MAX_LAYERS)
+#define TREE_MAX_NODES (2097152)
+
+#define TREE_ROOT_SIZE_X (16.0)
+#define TREE_ROOT_SIZE_Y (16.0)
+#define TREE_ROOT_SIZE_Z (16.0)
+#define TREE_ROOT_SIZE vec3(TREE_ROOT_SIZE_X, TREE_ROOT_SIZE_Y, TREE_ROOT_SIZE_Z)
+
+#define MACRO_TREE_MAX_NODES_IN_LAYER_N(mp_LAYER_N) (uint(pow(TREE_NUM_CHILDREN_PER_NODE, mp_LAYER_N)))
+const uint TREE_MAX_LEAF_NODES = MACRO_TREE_MAX_NODES_IN_LAYER_N(TREE_NUM_MAX_LAYERS);
+
+const uint TREE_MAX_NODES_IN_LAYER_0 = MACRO_TREE_MAX_NODES_IN_LAYER_N(0);
+const uint TREE_MAX_NODES_IN_LAYER_1 = MACRO_TREE_MAX_NODES_IN_LAYER_N(1);
+const uint TREE_MAX_NODES_IN_LAYER_2 = MACRO_TREE_MAX_NODES_IN_LAYER_N(2);
+const uint TREE_MAX_NODES_IN_LAYER_3 = MACRO_TREE_MAX_NODES_IN_LAYER_N(3);
+const uint TREE_MAX_NODES_IN_LAYER_4 = MACRO_TREE_MAX_NODES_IN_LAYER_N(4);
+const uint TREE_MAX_NODES_IN_LAYER_5 = MACRO_TREE_MAX_NODES_IN_LAYER_N(5);
+const uint TREE_MAX_NODES_IN_LAYER_6 = MACRO_TREE_MAX_NODES_IN_LAYER_N(6);
+
+const uint TREE_MAX_NODES_IN_LAYER_N[] = {
+	TREE_MAX_NODES_IN_LAYER_0,
+	TREE_MAX_NODES_IN_LAYER_1,
+	TREE_MAX_NODES_IN_LAYER_2,
+	TREE_MAX_NODES_IN_LAYER_3,
+	TREE_MAX_NODES_IN_LAYER_4,
+	TREE_MAX_NODES_IN_LAYER_5,
+	TREE_MAX_NODES_IN_LAYER_6,
+};
+
+const uint TREE_BUFFER_START_IDX_LAYER_0 = 0;
+const uint TREE_BUFFER_START_IDX_LAYER_1 = TREE_BUFFER_START_IDX_LAYER_0 + TREE_MAX_NODES_IN_LAYER_0;
+const uint TREE_BUFFER_START_IDX_LAYER_2 = TREE_BUFFER_START_IDX_LAYER_1 + TREE_MAX_NODES_IN_LAYER_1;
+const uint TREE_BUFFER_START_IDX_LAYER_3 = TREE_BUFFER_START_IDX_LAYER_2 + TREE_MAX_NODES_IN_LAYER_2;
+const uint TREE_BUFFER_START_IDX_LAYER_4 = TREE_BUFFER_START_IDX_LAYER_3 + TREE_MAX_NODES_IN_LAYER_3;
+const uint TREE_BUFFER_START_IDX_LAYER_5 = TREE_BUFFER_START_IDX_LAYER_4 + TREE_MAX_NODES_IN_LAYER_4;
+const uint TREE_BUFFER_START_IDX_LAYER_6 = TREE_BUFFER_START_IDX_LAYER_5 + TREE_MAX_NODES_IN_LAYER_5;
+
+const uint TREE_BUFFER_START_IDX_LAYER_N[] = {
+	TREE_BUFFER_START_IDX_LAYER_0,
+	TREE_BUFFER_START_IDX_LAYER_1,
+	TREE_BUFFER_START_IDX_LAYER_2,
+	TREE_BUFFER_START_IDX_LAYER_3,
+	TREE_BUFFER_START_IDX_LAYER_4,
+	TREE_BUFFER_START_IDX_LAYER_5,
+	TREE_BUFFER_START_IDX_LAYER_6,
+};
+
+// const uint TREE_BUFFER_LAYER_MAX_NODES[TREE_NUM_MAX_LAYERS] = { MACRO_LIST_N(1, 0)};
+// const uint TREE_BUFFER_LAYER_START_IDX[TREE_NUM_MAX_LAYERS] = {0,};
+
+layout(set = 1, binding = 0, std430) buffer TreeBuffer {
+	TreeNodeData nodes[TREE_MAX_NODES];
+} tree_buffer;
+
+float remap(float value, float min1, float max1, float min2, float max2) {
+  return min2 + (value - min1) * (max2 - min2) / (max1 - min1);
+}
+
+float sample_scene(vec3 position) {
+	// float largeShape = texture(large_noise, worldPosition).r;
+	// largeShape = smoothstep(coverage , coverage - 0.1, 1.0 - (largeShape * gradientSample.r)) + max(effectorAdditive, 0.0);
+	// vec4 mediumShapes = texture(noise_medium, (worldPosition - mediumNoisePos) / mediumnoisescale).rgba;
+	// float mediumshape = 1.0 - mediumShapes.b;
+	// smallShape = smallShape * gradientSample.g * pow((1.0 - mediumshape), smallscalePower);
+	
+
+	// float shape = mediumshape + max(effectorAdditive, 0.0);
+	// shape = clamp(remap(shape, 1.0 - largeShape, 1.0, 0.0, 1.0), 0.0, 1.0);
+	// shape = clamp(remap(shape, smallShape, 1.0, 0.0, 1.0), 0.0, 1.0);
+	// shape += min(effectorAdditive, 0.0);
+
+	// return clamp(shape, 0.0, 1.0);
+
+	float large_noise_contribution = clamp(remap(texture(large_noise, position / float(textureSize(large_noise, 0))).x, max((1.0 - params.cloud_coverage) * 2.0 - 1.0, 0.0), min((1.0 - params.cloud_coverage) * 2.0, 1.0), 0.0, 1.0), 0.0, 1.0);
+	vec4 height_gradient = texture(heightmask, vec2(position.y / TREE_ROOT_SIZE_Y, 0.5));
+	// return large_noise_contribution;
+	return clamp(large_noise_contribution * pow(height_gradient.r, 1.0), 0.0, 1.0);
+}
+
+#define MACRO_EXP0(mp_BASE) (1)
+#define MACRO_EXP1(mp_BASE) (MACRO_EXP0(mp_BASE) * (mp_BASE))
+#define MACRO_EXP2(mp_BASE) (MACRO_EXP1(mp_BASE) * (mp_BASE))
+#define MACRO_EXP3(mp_BASE) (MACRO_EXP2(mp_BASE) * (mp_BASE))
+#define MACRO_EXP4(mp_BASE) (MACRO_EXP3(mp_BASE) * (mp_BASE))
+#define MACRO_EXP5(mp_BASE) (MACRO_EXP4(mp_BASE) * (mp_BASE))
+#define MACRO_EXP6(mp_BASE) (MACRO_EXP5(mp_BASE) * (mp_BASE))
+
+uvec3 local_child_tree_node_idx_to_xyz(uint idx) {
+	uint x = (idx / uint(1                                                                                )) % TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X;
+	uint y = (idx / uint(1 * TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X                                        )) % TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Y;
+	uint z = (idx / uint(1 * TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X * TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Y)) % TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Z;
+	return uvec3(x,y,z);
+}
+
+uvec3 local_layer_tree_node_idx_to_xyz(uint idx) {
+	return
+		local_child_tree_node_idx_to_xyz((idx / MACRO_EXP0(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP0(TREE_NUM_DIVISIONS_PER_NODE) +
+		local_child_tree_node_idx_to_xyz((idx / MACRO_EXP1(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP1(TREE_NUM_DIVISIONS_PER_NODE) +
+		local_child_tree_node_idx_to_xyz((idx / MACRO_EXP2(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP2(TREE_NUM_DIVISIONS_PER_NODE) +
+		local_child_tree_node_idx_to_xyz((idx / MACRO_EXP3(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP3(TREE_NUM_DIVISIONS_PER_NODE) +
+		local_child_tree_node_idx_to_xyz((idx / MACRO_EXP4(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP4(TREE_NUM_DIVISIONS_PER_NODE) +
+		local_child_tree_node_idx_to_xyz((idx / MACRO_EXP5(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP5(TREE_NUM_DIVISIONS_PER_NODE) +
+		local_child_tree_node_idx_to_xyz((idx / MACRO_EXP6(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP6(TREE_NUM_DIVISIONS_PER_NODE) ;
+}
+
+struct AABB3 {
+	vec3 min;
+	vec3 max;
+};
+
+uint tree_node_idx_to_layer(TreeNodeIdx_t idx) {
+	uint layer = 0;
+	for (uint i = 1; i < TREE_NUM_MAX_LAYERS; ++i)
+		layer += uint(idx >= TREE_BUFFER_START_IDX_LAYER_N[i]);
+	return layer;
+}
+
+vec3 tree_layer_cell_size(uint layer) {
+	return TREE_ROOT_SIZE / pow(TREE_NUM_DIVISIONS_PER_NODE, uvec3(layer));
+}
+
+uvec3 tree_node_idx_to_xyz(TreeNodeIdx_t idx, uint layer) {
+	return
+		local_layer_tree_node_idx_to_xyz(idx - TREE_BUFFER_START_IDX_LAYER_N[layer]);
+		// uvec3(pow(2, (max(TREE_NUM_MAX_LAYERS, 1) - 1) - layer));
+}
+
+uvec3 tree_node_idx_to_xyz(TreeNodeIdx_t idx) {
+	uint layer = tree_node_idx_to_layer(idx);
+	return tree_node_idx_to_xyz(idx, layer);
+}
+
+vec3 tree_node_idx_to_pos_center(TreeNodeIdx_t idx, uint layer) {
+	return (tree_node_idx_to_xyz(idx, layer) + 0.5) * tree_layer_cell_size(layer);
+}
+
+vec3 tree_node_idx_to_pos_center(TreeNodeIdx_t idx) {
+	uint layer = tree_node_idx_to_layer(idx);
+	return tree_node_idx_to_pos_center(idx, layer);
+}
+
+AABB3 tree_node_idx_to_aabb(TreeNodeIdx_t idx, uint layer) {
+	uvec3 xyz = tree_node_idx_to_xyz(idx, layer);
+	return AABB3(
+		tree_layer_cell_size(layer) * xyz,
+		tree_layer_cell_size(layer) * (xyz + 1)
+	);
+}
+
+AABB3 tree_node_idx_to_aabb(TreeNodeIdx_t idx) {
+	uint layer = tree_node_idx_to_layer(idx);
+	return tree_node_idx_to_aabb(idx, layer);
+}
+
+bool is_pos_inside_aabb(vec3 pos, AABB3 aabb) {
+	return aabb == AABB3(min(pos, aabb.min), max(pos, aabb.max));
+}
+
+bool is_pos_inside_tree_node(vec3 pos, TreeNodeIdx_t idx, uint layer) {
+	return is_pos_inside_aabb(pos, tree_node_idx_to_aabb(idx, layer));
+}
+
+bool is_pos_inside_tree_node(vec3 pos, TreeNodeIdx_t idx) {
+	uint layer = tree_node_idx_to_layer(idx);
+	return is_pos_inside_tree_node(pos, idx, layer);
+}
+
+TreeNodeIdx_t closest_tree_node_to_pos(vec3 pos, uint which_layer) {
+	return 0;
+}
+
+struct RayAABBIntersection {
+	float entry_t;
+	float exit_t;
+};
+
+RayAABBIntersection intersect_ray_with_aabb(vec3 ray_dir, vec3 ray_origin, AABB3 aabb) {
+	// See https://en.wikipedia.org/wiki/Slab_method
+	// t [low,high][x,y,z]
+	vec3 t_lh_i[2] = {
+		(aabb.min - ray_origin) / ray_dir,
+		(aabb.max - ray_origin) / ray_dir
+	};
+	// t [close,far][x,y,z]
+	vec3 t_cf_i[2] = {
+		min(t_lh_i[0], t_lh_i[1]),
+		max(t_lh_i[0], t_lh_i[1])
+	};
+	// t [close,far]
+	float t_cf[2] = {
+		max(max(t_cf_i[0].x, t_cf_i[0].y), t_cf_i[0].z),
+		min(min(t_cf_i[1].x, t_cf_i[1].y), t_cf_i[1].z)
+	};
+
+	return RayAABBIntersection(t_cf[0], t_cf[1]);
+}
+
+bool will_ray_enter_aabb(RayAABBIntersection intersection) {
+	return
+		(intersection.entry_t > 0.0) &&
+		(intersection.entry_t <= intersection.exit_t);
+}
+
+bool will_ray_exit_aabb(RayAABBIntersection intersection) {
+	return 
+		(intersection.exit_t > 0.0) &&
+		(intersection.exit_t > intersection.entry_t);
+}

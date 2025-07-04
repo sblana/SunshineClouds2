@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://dvkvswtu4jsyn"
+path="res://.godot/imported/tree_create.glsl-c95dd0f6c6fa62b73ea0b4ff067712e4.res"
+
+[deps]
+
+source_file="res://treetest/tree_create.glsl"
+dest_files=["res://.godot/imported/tree_create.glsl-c95dd0f6c6fa62b73ea0b4ff067712e4.res"]
+
+[params]
+

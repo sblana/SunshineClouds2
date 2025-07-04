@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://bs70xjeq35amq"
+path="res://.godot/imported/tree_march.glsl-a81ac6b244649ef2499ef1b9a327cf35.res"
+
+[deps]
+
+source_file="res://treetest/tree_march.glsl"
+dest_files=["res://.godot/imported/tree_march.glsl-a81ac6b244649ef2499ef1b9a327cf35.res"]
+
+[params]
+
