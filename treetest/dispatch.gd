@@ -121,7 +121,8 @@ var treecreate_pipeline : RID = RID()
 var treemarch_shader : RID = RID()
 var treemarch_pipeline : RID = RID()
 
-var tree_buffer_byte_size : int = (4*4)*65536*8*8
+var tree_node_data_byte_size : int = (4+4)*4
+var tree_buffer_byte_size : int = tree_node_data_byte_size * 65536*8
 var tree_buffer : RID = RID()
 var uniform_set1 : RID = RID()
 #endregion

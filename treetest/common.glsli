@@ -123,8 +123,12 @@ layout(push_constant, std430) uniform Params {
 // 	GenericData data;
 // } settings_buffer;
 
-
 #define TreeNodeIdx_t uint
+
+struct TreeNodeAABB {
+	vec3 aabb_min;
+	uint layer /* see tree_node_aabb_to_aabb() */;
+};
 
 struct TreeNodeData {
 	TreeNodeIdx_t child_nodes_start_idx;
@@ -132,13 +136,15 @@ struct TreeNodeData {
 	bool is_leaf_node;
 
 	float data;
+	
+	TreeNodeAABB aabb;
 };
 
 TreeNodeData tree_node_data_init() {
-	return TreeNodeData(0, 0, false, 0.0);
+	return TreeNodeData(0, 0, false, 0.0, TreeNodeAABB(vec3(0.0), 0));
 }
 
-#define TREE_NUM_MAX_LAYERS (7)
+#define TREE_NUM_MAX_LAYERS (6)
 #define TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X (2)
 #define TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Y (2)
 #define TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Z (2)
@@ -146,7 +152,7 @@ TreeNodeData tree_node_data_init() {
 #define TREE_NUM_CHILDREN_PER_NODE (TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X * TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Y * TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Z)
 // todo: figure out how many maximum nodes we can actually have
 // #define TREE_MAX_NODES (TREE_NUM_CHILDREN_PER_NODE^TREE_NUM_MAX_LAYERS)
-#define TREE_MAX_NODES (2097152)
+#define TREE_MAX_NODES (65536*8)
 
 #define TREE_ROOT_SIZE_X (16.0)
 #define TREE_ROOT_SIZE_Y (16.0)
@@ -241,13 +247,14 @@ uvec3 local_child_tree_node_idx_to_xyz(uint idx) {
 
 uvec3 local_layer_tree_node_idx_to_xyz(uint idx) {
 	return
-		local_child_tree_node_idx_to_xyz((idx / MACRO_EXP0(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP0(TREE_NUM_DIVISIONS_PER_NODE) +
-		local_child_tree_node_idx_to_xyz((idx / MACRO_EXP1(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP1(TREE_NUM_DIVISIONS_PER_NODE) +
-		local_child_tree_node_idx_to_xyz((idx / MACRO_EXP2(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP2(TREE_NUM_DIVISIONS_PER_NODE) +
-		local_child_tree_node_idx_to_xyz((idx / MACRO_EXP3(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP3(TREE_NUM_DIVISIONS_PER_NODE) +
-		local_child_tree_node_idx_to_xyz((idx / MACRO_EXP4(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP4(TREE_NUM_DIVISIONS_PER_NODE) +
-		local_child_tree_node_idx_to_xyz((idx / MACRO_EXP5(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP5(TREE_NUM_DIVISIONS_PER_NODE) +
-		local_child_tree_node_idx_to_xyz((idx / MACRO_EXP6(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP6(TREE_NUM_DIVISIONS_PER_NODE) ;
+		local_child_tree_node_idx_to_xyz((idx / MACRO_EXP0(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP0(TREE_NUM_DIVISIONS_PER_NODE)
+		+ local_child_tree_node_idx_to_xyz((idx / MACRO_EXP1(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP1(TREE_NUM_DIVISIONS_PER_NODE)
+		+ local_child_tree_node_idx_to_xyz((idx / MACRO_EXP2(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP2(TREE_NUM_DIVISIONS_PER_NODE)
+		+ local_child_tree_node_idx_to_xyz((idx / MACRO_EXP3(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP3(TREE_NUM_DIVISIONS_PER_NODE)
+		+ local_child_tree_node_idx_to_xyz((idx / MACRO_EXP4(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP4(TREE_NUM_DIVISIONS_PER_NODE)
+		+ local_child_tree_node_idx_to_xyz((idx / MACRO_EXP5(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP5(TREE_NUM_DIVISIONS_PER_NODE)
+		+ local_child_tree_node_idx_to_xyz((idx / MACRO_EXP6(TREE_NUM_CHILDREN_PER_NODE)) % TREE_NUM_CHILDREN_PER_NODE) * MACRO_EXP6(TREE_NUM_DIVISIONS_PER_NODE)
+		;
 }
 
 struct AABB3 {
@@ -312,8 +319,11 @@ bool is_pos_inside_tree_node(vec3 pos, TreeNodeIdx_t idx) {
 	return is_pos_inside_tree_node(pos, idx, layer);
 }
 
-TreeNodeIdx_t closest_tree_node_to_pos(vec3 pos, uint which_layer) {
-	return 0;
+AABB3 tree_node_aabb_to_aabb(TreeNodeAABB tn_aabb) {
+	return AABB3(
+		tn_aabb.aabb_min,
+		tn_aabb.aabb_min + tree_layer_cell_size(tn_aabb.layer)
+	);
 }
 
 struct RayAABBIntersection {
@@ -340,6 +350,10 @@ RayAABBIntersection intersect_ray_with_aabb(vec3 ray_dir, vec3 ray_origin, AABB3
 	};
 
 	return RayAABBIntersection(t_cf[0], t_cf[1]);
+}
+
+RayAABBIntersection intersect_ray_with_aabb(vec3 ray_dir, vec3 ray_origin, TreeNodeAABB aabb) {
+	return intersect_ray_with_aabb(ray_dir, ray_origin, tree_node_aabb_to_aabb(aabb));
 }
 
 bool will_ray_enter_aabb(RayAABBIntersection intersection) {
