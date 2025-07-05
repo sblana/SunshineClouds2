@@ -5,17 +5,18 @@
 # This makes installing through the AssetLib easier, because no files and folders
 # need to be unchecked.
 
-/.githubstuff     	export-ignore
-/.git         		export-ignore
-/.godot        		export-ignore
-/NewCloudsGD.tres       export-ignore
-/README.md          	export-ignore
-/LICENSE.md         	export-ignore
-/CloudsMask.exr     	export-ignore
-/CloudsMask.exr.import 	export-ignore
-/icon.svg.import    	export-ignore
-/icon.svg   		export-ignore
-/project.godot      	export-ignore
-/.editorconfig      	export-ignore
-/.gitattributes      	export-ignore
-/.gitignore      	export-ignore
+/githubstuff     		export-ignore
+/addons/SunshineClouds2/.vs	export-ignore
+/.git         			export-ignore
+/.godot        			export-ignore
+/NewCloudsGD.tres       	export-ignore
+/README.md          		export-ignore
+/LICENSE.md         		export-ignore
+/CloudsMask.exr     		export-ignore
+/CloudsMask.exr.import 		export-ignore
+/icon.svg.import    		export-ignore
+/icon.svg   			export-ignore
+/project.godot      		export-ignore
+/.editorconfig      		export-ignore
+/.gitattributes      		export-ignore
+/.gitignore      		export-ignore
