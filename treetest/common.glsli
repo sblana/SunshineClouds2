@@ -37,7 +37,7 @@ layout(set = 0, binding = 14) uniform uniformBuffer {
 	vec4 ambientLightColor;
 	vec4 ambientGroundLightColor;
 	vec4 ambientfogdistancecolor;
-	
+
 	float small_noise_scale;
 	float min_step_distance;
 	float max_step_distance;
@@ -136,7 +136,7 @@ struct TreeNodeData {
 	bool is_leaf_node;
 
 	float data;
-	
+
 	TreeNodeAABB aabb;
 };
 
@@ -215,7 +215,7 @@ float sample_scene(vec3 position) {
 	// vec4 mediumShapes = texture(noise_medium, (worldPosition - mediumNoisePos) / mediumnoisescale).rgba;
 	// float mediumshape = 1.0 - mediumShapes.b;
 	// smallShape = smallShape * gradientSample.g * pow((1.0 - mediumshape), smallscalePower);
-	
+
 
 	// float shape = mediumshape + max(effectorAdditive, 0.0);
 	// shape = clamp(remap(shape, 1.0 - largeShape, 1.0, 0.0, 1.0), 0.0, 1.0);
@@ -243,6 +243,14 @@ uvec3 local_child_tree_node_idx_to_xyz(uint idx) {
 	uint y = (idx / uint(1 * TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X                                        )) % TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Y;
 	uint z = (idx / uint(1 * TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X * TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Y)) % TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Z;
 	return uvec3(x,y,z);
+}
+
+uint xyz_to_local_child_tree_node_idx(uvec3 xyz) {
+	uint idx =
+		(xyz.x                                                                                ) +
+		(xyz.y * TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X                                        ) +
+		(xyz.z * TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X * TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Y) ;
+	return idx;
 }
 
 uvec3 local_layer_tree_node_idx_to_xyz(uint idx) {
@@ -319,6 +327,17 @@ bool is_pos_inside_tree_node(vec3 pos, TreeNodeIdx_t idx) {
 	return is_pos_inside_tree_node(pos, idx, layer);
 }
 
+uint which_is_the_closest_child_of_tree_node_to_pos(vec3 pos, AABB3 tree_node_aabb) {
+	vec3 local_pos = (pos - tree_node_aabb.min) / (tree_node_aabb.max - tree_node_aabb.min) * vec3(TREE_NUM_DIVISIONS_PER_NODE);
+	uvec3 local_xyz = uvec3(clamp(
+		round(local_pos + 0.5),
+		vec3(1.0),
+		vec3(TREE_NUM_DIVISIONS_PER_NODE)
+	)) - uvec3(1);
+	uint closest_child_idx = xyz_to_local_child_tree_node_idx(local_xyz);
+	return closest_child_idx;
+}
+
 AABB3 tree_node_aabb_to_aabb(TreeNodeAABB tn_aabb) {
 	return AABB3(
 		tn_aabb.aabb_min,
@@ -363,7 +382,7 @@ bool will_ray_enter_aabb(RayAABBIntersection intersection) {
 }
 
 bool will_ray_exit_aabb(RayAABBIntersection intersection) {
-	return 
+	return
 		(intersection.exit_t > 0.0) &&
 		(intersection.exit_t > intersection.entry_t);
 }

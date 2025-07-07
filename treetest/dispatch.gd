@@ -1,8 +1,14 @@
 class_name TreeTestEffect
 extends CompositorEffect
 
+var update_octree : bool = false
+
+
 @export_group("Basic Settings")
-@export_range(0, 1) var clouds_coverage : float = 0.6
+@export_range(0, 1) var clouds_coverage : float = 0.6:
+	set(f):
+		clouds_coverage = f
+		update_octree = true
 @export_range(0, 20) var clouds_density : float = 1.0
 @export_range(0, 2) var atmospheric_density : float = 0.5
 @export_range(0, 10) var lighting_density : float = 0.55
@@ -409,6 +415,7 @@ func _render_callback(effect_callback_type, render_data):
 			var new_size = size / resscale
 			var view_count = buffers.get_view_count()
 			if size != last_size or uniform_sets == null or uniform_sets.size() != view_count * 3 or color_images.size() == 0 or color_images[0] != buffers.get_color_layer(0):
+				update_octree = true
 				initialize_compute()
 				
 				accumulation_textures.clear()
@@ -725,13 +732,16 @@ func _render_callback(effect_callback_type, render_data):
 				# rd.compute_list_dispatch(prepass_list, x_groups, y_groups, 1)
 				# rd.compute_list_end()
 
-				var treecreate_list := rd.compute_list_begin()
-				rd.compute_list_bind_compute_pipeline(treecreate_list, treecreate_pipeline)
-				rd.compute_list_bind_uniform_set(treecreate_list, uniform_sets[view * 3 + 1], 0)
-				rd.compute_list_bind_uniform_set(treecreate_list, uniform_set1, 1);
-				rd.compute_list_set_push_constant(treecreate_list, push_constants, push_constants.size())
-				rd.compute_list_dispatch(treecreate_list, 1, 1, 1)
-				rd.compute_list_end()
+				if update_octree:
+					var treecreate_list := rd.compute_list_begin()
+					rd.compute_list_bind_compute_pipeline(treecreate_list, treecreate_pipeline)
+					rd.compute_list_bind_uniform_set(treecreate_list, uniform_sets[view * 3 + 1], 0)
+					rd.compute_list_bind_uniform_set(treecreate_list, uniform_set1, 1);
+					rd.compute_list_set_push_constant(treecreate_list, push_constants, push_constants.size())
+					rd.compute_list_dispatch(treecreate_list, 1, 1, 1)
+					rd.compute_list_end()
+					print("just ran")
+					update_octree = false
 
 				var treemarch_list := rd.compute_list_begin()
 				rd.compute_list_bind_compute_pipeline(treemarch_list, treemarch_pipeline)
