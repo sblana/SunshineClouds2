@@ -388,3 +388,22 @@ bool will_ray_exit_aabb(RayAABBIntersection intersection) {
 		(intersection.exit_t > 0.0) &&
 		(intersection.exit_t > intersection.entry_t);
 }
+
+struct RayAABBIntersectionExitOnly {
+	float exit_t;
+	vec3 t_far_i;
+};
+
+RayAABBIntersectionExitOnly intersect_inv_ray_with_aabb_exit_only(vec3 inv_ray_dir, vec3 ray_origin, AABB3 aabb) {
+	// t [low,high][x,y,z]
+	vec3 t_lh_i[2] = {
+		(aabb.min - ray_origin) * inv_ray_dir,
+		(aabb.max - ray_origin) * inv_ray_dir
+	};
+	// t far[x,y,z]
+	vec3 t_f_i = max(t_lh_i[0], t_lh_i[1]);
+	// t far
+	float t_f = min(min(t_f_i.x, t_f_i.y), t_f_i.z);
+
+	return RayAABBIntersectionExitOnly(t_f, t_f_i);
+}

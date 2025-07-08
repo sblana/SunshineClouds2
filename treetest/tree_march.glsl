@@ -50,13 +50,13 @@ void main() {
 	TreeNodeIdx_t cur_node_idxs[TREE_NUM_MAX_LAYERS];
 	cur_node_idxs[0] = 0;
 
-	RayAABBIntersection next_intersection = intersect_ray_with_aabb(ray_dir, ray_origin, AABB3(vec3(0.0), TREE_ROOT_SIZE));
+	RayAABBIntersection root_intersection = intersect_ray_with_aabb(ray_dir, ray_origin, AABB3(vec3(0.0), TREE_ROOT_SIZE));
 
 	uint max_layer = 0;
 	uint n_iters = 0;
 	uint64_t clock_before_rt = clockRealtimeEXT();
-	if (will_ray_exit_aabb(next_intersection)) {
-		ray_pos = ray_origin + ray_dir * max(next_intersection.entry_t + 0.001, 0.0);
+	if (will_ray_exit_aabb(root_intersection)) {
+		ray_pos = ray_origin + ray_dir * max(root_intersection.entry_t + 0.001, 0.0);
 		vec3 size = tree_layer_cell_size(cur_layer);
 		for (int i = 0; i < MAX_NUM_STEPS; ++i) {
 			n_iters++;
@@ -75,7 +75,7 @@ void main() {
 			}
 			max_layer = uint(max(cur_layer, max_layer));
 
-			next_intersection = intersect_inv_ray_with_aabb(inv_ray_dir, ray_pos, tn_aabb);
+			RayAABBIntersectionExitOnly next_intersection = intersect_inv_ray_with_aabb_exit_only(inv_ray_dir, ray_pos, tn_aabb);
 
 			// leaf node
 			if (tree_buffer.nodes[cur_node_idxs[cur_layer]].is_leaf_node) {
