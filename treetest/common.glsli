@@ -142,6 +142,7 @@ struct TreeNodeData {
 
 TreeNodeData tree_node_data_init() {
 	return TreeNodeData(0, 0, false, 0.0);
+	// return TreeNodeData(0, 0, false, 0.0, TreeNodeAABB(vec3(0.0), 0));
 }
 
 #define TREE_NUM_MAX_LAYERS (7)
@@ -347,12 +348,12 @@ struct RayAABBIntersection {
 	vec3 t_far_i;
 };
 
-RayAABBIntersection intersect_ray_with_aabb(vec3 ray_dir, vec3 ray_origin, AABB3 aabb) {
+RayAABBIntersection intersect_inv_ray_with_aabb(vec3 inv_ray_dir, vec3 ray_origin, AABB3 aabb) {
 	// See https://en.wikipedia.org/wiki/Slab_method
 	// t [low,high][x,y,z]
 	vec3 t_lh_i[2] = {
-		(aabb.min - ray_origin) / ray_dir,
-		(aabb.max - ray_origin) / ray_dir
+		(aabb.min - ray_origin) * inv_ray_dir,
+		(aabb.max - ray_origin) * inv_ray_dir
 	};
 	// t [close,far][x,y,z]
 	vec3 t_cf_i[2] = {
@@ -366,6 +367,10 @@ RayAABBIntersection intersect_ray_with_aabb(vec3 ray_dir, vec3 ray_origin, AABB3
 	};
 
 	return RayAABBIntersection(t_cf[0], t_cf[1], t_cf_i[1]);
+}
+
+RayAABBIntersection intersect_ray_with_aabb(vec3 ray_dir, vec3 ray_origin, AABB3 aabb) {
+	return intersect_inv_ray_with_aabb(1.0 / ray_dir, ray_origin, aabb);
 }
 
 RayAABBIntersection intersect_ray_with_aabb(vec3 ray_dir, vec3 ray_origin, TreeNodeAABB aabb) {

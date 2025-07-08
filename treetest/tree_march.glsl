@@ -39,6 +39,7 @@ void main() {
 	// Define the ray properties
 
 	vec3 ray_dir = normalize(rd_world);
+	vec3 inv_ray_dir = 1.0 / ray_dir;
 	// local to tree root
 	vec3 ray_origin = genericData.view[3].xyz - TREE_ROOT_ORIGIN;
 	vec3 ray_pos = ray_origin - TREE_ROOT_ORIGIN;
@@ -74,7 +75,7 @@ void main() {
 			}
 			max_layer = uint(max(cur_layer, max_layer));
 
-			next_intersection = intersect_ray_with_aabb(ray_dir, ray_pos, tn_aabb);
+			next_intersection = intersect_inv_ray_with_aabb(inv_ray_dir, ray_pos, tn_aabb);
 
 			// leaf node
 			if (tree_buffer.nodes[cur_node_idxs[cur_layer]].is_leaf_node) {
