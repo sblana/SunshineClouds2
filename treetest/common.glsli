@@ -137,14 +137,14 @@ struct TreeNodeData {
 
 	float data;
 
-	TreeNodeAABB aabb;
+	// TreeNodeAABB aabb;
 };
 
 TreeNodeData tree_node_data_init() {
-	return TreeNodeData(0, 0, false, 0.0, TreeNodeAABB(vec3(0.0), 0));
+	return TreeNodeData(0, 0, false, 0.0);
 }
 
-#define TREE_NUM_MAX_LAYERS (6)
+#define TREE_NUM_MAX_LAYERS (7)
 #define TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X (2)
 #define TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Y (2)
 #define TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Z (2)
@@ -154,10 +154,11 @@ TreeNodeData tree_node_data_init() {
 // #define TREE_MAX_NODES (TREE_NUM_CHILDREN_PER_NODE^TREE_NUM_MAX_LAYERS)
 #define TREE_MAX_NODES (65536*8)
 
-#define TREE_ROOT_SIZE_X (16.0)
-#define TREE_ROOT_SIZE_Y (16.0)
-#define TREE_ROOT_SIZE_Z (16.0)
+#define TREE_ROOT_SIZE_X (128.0)
+#define TREE_ROOT_SIZE_Y (8.0)
+#define TREE_ROOT_SIZE_Z (128.0)
 #define TREE_ROOT_SIZE vec3(TREE_ROOT_SIZE_X, TREE_ROOT_SIZE_Y, TREE_ROOT_SIZE_Z)
+#define TREE_ROOT_ORIGIN vec3(0.0, 0.0, 0.0)
 
 #define MACRO_TREE_MAX_NODES_IN_LAYER_N(mp_LAYER_N) (uint(pow(TREE_NUM_CHILDREN_PER_NODE, mp_LAYER_N)))
 const uint TREE_MAX_LEAF_NODES = MACRO_TREE_MAX_NODES_IN_LAYER_N(TREE_NUM_MAX_LAYERS);
@@ -327,13 +328,8 @@ bool is_pos_inside_tree_node(vec3 pos, TreeNodeIdx_t idx) {
 	return is_pos_inside_tree_node(pos, idx, layer);
 }
 
-uint which_is_the_closest_child_of_tree_node_to_pos(vec3 pos, AABB3 tree_node_aabb) {
-	vec3 local_pos = (pos - tree_node_aabb.min) / (tree_node_aabb.max - tree_node_aabb.min) * vec3(TREE_NUM_DIVISIONS_PER_NODE);
-	uvec3 local_xyz = uvec3(clamp(
-		round(local_pos + 0.5),
-		vec3(1.0),
-		vec3(TREE_NUM_DIVISIONS_PER_NODE)
-	)) - uvec3(1);
+uint which_is_the_closest_child_of_tree_node_to_pos(vec3 pos, vec3 aabb_min, vec3 size) {
+	uvec3 local_xyz = min(uvec3(max(pos - aabb_min, vec3(0.0)) / size * TREE_NUM_DIVISIONS_PER_NODE), TREE_NUM_DIVISIONS_PER_NODE - 1);
 	uint closest_child_idx = xyz_to_local_child_tree_node_idx(local_xyz);
 	return closest_child_idx;
 }
@@ -348,6 +344,7 @@ AABB3 tree_node_aabb_to_aabb(TreeNodeAABB tn_aabb) {
 struct RayAABBIntersection {
 	float entry_t;
 	float exit_t;
+	vec3 t_far_i;
 };
 
 RayAABBIntersection intersect_ray_with_aabb(vec3 ray_dir, vec3 ray_origin, AABB3 aabb) {
@@ -368,7 +365,7 @@ RayAABBIntersection intersect_ray_with_aabb(vec3 ray_dir, vec3 ray_origin, AABB3
 		min(min(t_cf_i[1].x, t_cf_i[1].y), t_cf_i[1].z)
 	};
 
-	return RayAABBIntersection(t_cf[0], t_cf[1]);
+	return RayAABBIntersection(t_cf[0], t_cf[1], t_cf_i[1]);
 }
 
 RayAABBIntersection intersect_ray_with_aabb(vec3 ray_dir, vec3 ray_origin, TreeNodeAABB aabb) {

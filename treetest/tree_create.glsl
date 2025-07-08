@@ -16,14 +16,13 @@ void main() {
 			TreeNodeIdx_t idx = TREE_BUFFER_START_IDX_LAYER_N[TREE_NUM_MAX_LAYERS-1] + p;
 			cur.parent_node_idx = TREE_BUFFER_START_IDX_LAYER_N[TREE_NUM_MAX_LAYERS-2] + p / TREE_NUM_CHILDREN_PER_NODE;
 			cur.is_leaf_node = true;
-			cur.aabb.aabb_min = cur_cell_size * tree_node_idx_to_xyz(idx, TREE_NUM_MAX_LAYERS-1);
-			cur.aabb.layer = TREE_NUM_MAX_LAYERS-1;
+			vec3 aabbmin = cur_cell_size * tree_node_idx_to_xyz(idx, TREE_NUM_MAX_LAYERS-1);
 			cur.data = 0.0;
-			const vec3 num_samples_per_axis = vec3(1,1,1);
+			const vec3 num_samples_per_axis = vec3(8,2,8);
 			for (uint z = 0; z < num_samples_per_axis.z; ++z) {
 				for (uint y = 0; y < num_samples_per_axis.y; ++y)
 					for (uint x = 0; x < num_samples_per_axis.x; ++x)
-						cur.data += sample_scene(cur.aabb.aabb_min + cur_cell_size * (vec3(x,y,z) + 0.5) / num_samples_per_axis);
+						cur.data += sample_scene(aabbmin + cur_cell_size * (vec3(x,y,z) + 0.5) / num_samples_per_axis);
 			}
 			cur.data = cur.data / (num_samples_per_axis.x * num_samples_per_axis.y * num_samples_per_axis.z);
 			tree_buffer.nodes[idx] = cur;
@@ -41,9 +40,6 @@ void main() {
 				cur.parent_node_idx = TREE_BUFFER_START_IDX_LAYER_N[i-1] + p / TREE_NUM_CHILDREN_PER_NODE;
 				cur.child_nodes_start_idx = TREE_BUFFER_START_IDX_LAYER_N[i+1] + p * TREE_NUM_CHILDREN_PER_NODE;
 
-				cur.aabb.aabb_min = cur_cell_size * tree_node_idx_to_xyz(idx, i);
-				cur.aabb.layer = i;
-
 				// reference
 				cur.data = 0.0;
 				cur.is_leaf_node = true;
@@ -54,7 +50,7 @@ void main() {
 				cur.data /= TREE_NUM_CHILDREN_PER_NODE;
 				for (uint j = 0; j < TREE_NUM_CHILDREN_PER_NODE; ++j) {
 					float this_data = tree_buffer.nodes[cur.child_nodes_start_idx + j].data;
-					cur.is_leaf_node = !(!cur.is_leaf_node || ((0.0001) < this_data));
+					cur.is_leaf_node = !(!cur.is_leaf_node || ((cur.data + 0.001) < this_data || (cur.data - 0.001) > this_data));
 				}
 
 				tree_buffer.nodes[idx] = cur;
@@ -67,8 +63,6 @@ void main() {
 	if (gl_LocalInvocationIndex == 0) {
 		TreeNodeData cur = tree_node_data_init();
 		cur.child_nodes_start_idx = TREE_BUFFER_START_IDX_LAYER_1;
-		cur.aabb.aabb_min = tree_node_idx_to_aabb(0, 0).min;
-		cur.aabb.layer = 0;
 		tree_buffer.nodes[0] = cur;
 	}
 }

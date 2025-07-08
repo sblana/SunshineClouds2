@@ -39,8 +39,9 @@ void main() {
 	// Define the ray properties
 
 	vec3 ray_dir = normalize(rd_world);
-	vec3 ray_origin = genericData.view[3].xyz;
-	vec3 ray_pos = ray_origin;
+	// local to tree root
+	vec3 ray_origin = genericData.view[3].xyz - TREE_ROOT_ORIGIN;
+	vec3 ray_pos = ray_origin - TREE_ROOT_ORIGIN;
 
 	float density = 0.0;
 
@@ -48,63 +49,77 @@ void main() {
 	TreeNodeIdx_t cur_node_idxs[TREE_NUM_MAX_LAYERS];
 	cur_node_idxs[0] = 0;
 
-	RayAABBIntersection next_intersection = intersect_ray_with_aabb(ray_dir, ray_origin, tree_buffer.nodes[cur_node_idxs[0]].aabb);
+	RayAABBIntersection next_intersection = intersect_ray_with_aabb(ray_dir, ray_origin, AABB3(vec3(0.0), TREE_ROOT_SIZE));
 
 	uint max_layer = 0;
 	uint n_iters = 0;
 	uint64_t clock_before_rt = clockRealtimeEXT();
 	if (will_ray_exit_aabb(next_intersection)) {
 		ray_pos = ray_origin + ray_dir * max(next_intersection.entry_t + 0.001, 0.0);
+		vec3 size = tree_layer_cell_size(cur_layer);
 		for (int i = 0; i < MAX_NUM_STEPS; ++i) {
 			n_iters++;
-			if (!tree_buffer.nodes[cur_node_idxs[cur_layer]].is_leaf_node) {
-				AABB3 tn_aabb = tree_node_aabb_to_aabb(tree_buffer.nodes[cur_node_idxs[cur_layer]].aabb);
-
-				if (is_pos_inside_aabb(ray_pos, tn_aabb)) {
-					uint closest_child_j = which_is_the_closest_child_of_tree_node_to_pos(ray_pos, tn_aabb);
-					TreeNodeIdx_t closest_child_idx = tree_buffer.nodes[cur_node_idxs[cur_layer]].child_nodes_start_idx + closest_child_j;
-					cur_node_idxs[cur_layer + 1] = closest_child_idx;
-					cur_layer += 1;
-					max_layer = uint(max(cur_layer, max_layer));
-					// enter node
-					continue;
-				}
+			AABB3 tn_aabb = AABB3(vec3(floor(ray_pos / size) * size), vec3(0.0));
+			tn_aabb.max = tn_aabb.min + size;
+			// go down
+			while (!tree_buffer.nodes[cur_node_idxs[cur_layer]].is_leaf_node) {
+				uint closest_child_j = which_is_the_closest_child_of_tree_node_to_pos(ray_pos, tn_aabb.min, size);
+				TreeNodeIdx_t closest_child_idx = tree_buffer.nodes[cur_node_idxs[cur_layer]].child_nodes_start_idx + closest_child_j;
+				size /= vec3(TREE_NUM_DIVISIONS_PER_NODE);
+				tn_aabb.min = floor(ray_pos / size) * size;
+				tn_aabb.max = tn_aabb.min + size;
+				cur_node_idxs[cur_layer + 1] = closest_child_idx;
+				cur_layer += 1;
+				// enter node
 			}
-			// leaf node or no child collided (exiting node)
-			next_intersection = intersect_ray_with_aabb(ray_dir, ray_origin, tree_buffer.nodes[cur_node_idxs[cur_layer]].aabb);
+			max_layer = uint(max(cur_layer, max_layer));
+
+			next_intersection = intersect_ray_with_aabb(ray_dir, ray_pos, tn_aabb);
 
 			// leaf node
 			if (tree_buffer.nodes[cur_node_idxs[cur_layer]].is_leaf_node) {
+				float data = tree_buffer.nodes[cur_node_idxs[cur_layer]].data;
+				float total_t = next_intersection.exit_t;
 				if (cur_layer == (TREE_NUM_MAX_LAYERS - 1)) {
-					float start_t = max(0.0, next_intersection.entry_t);
-					float total_t = max(next_intersection.exit_t - start_t, 0.0);
-					// if (total_t > 0.0) {
-					float data = 0.0;
+					data = 0.0;
 					const uint num_samples = 2;
 					for (uint i = 0; i < num_samples; ++i) {
-						data += sample_scene(ray_origin + ray_dir * (start_t + (total_t / float(num_samples)) * (i + 0.5)));
+						data += sample_scene(ray_pos + ray_dir * (total_t / float(num_samples) * (i + 0.5)));
 					}
 					data /= float(num_samples);
-					density += data * pow(total_t, 1.0);
-					// }
-					if (density > 2.0) {
-						density = 2.0;
-						break;
-					}
+				}
+				density += data * total_t;
+				if (density > 2.0) {
+					density = 2.0;
+					break;
 				}
 			}
-			// exit node
-			ray_pos = ray_origin + ray_dir * (next_intersection.exit_t + 0.001);
 
-			if (cur_layer == 0)
+			// clamping. we need to be 1 bit lower than the maximum value. sucks to do unless we're already doing tons of bit manipulation.
+			vec3 next_min = tn_aabb.min + size * sign(ray_dir) * vec3(equal(next_intersection.exit_t.xxx, next_intersection.t_far_i));
+			vec3 next_max = tn_aabb.max + size * sign(ray_dir) * vec3(equal(next_intersection.exit_t.xxx, next_intersection.t_far_i));
+			ray_pos = clamp(ray_pos + ray_dir * (next_intersection.exit_t), next_min, next_max - vec3(0.0001) * (abs(next_max) + 1.0));
+
+			// go up
+			// need to find common ancestor of the current node and the next node.
+			// we know where the two nodes are so we can infer based on their bounding boxes
+			int j = int(cur_layer);
+			for (; j >= 0; --j) {
+				if (floor(ray_pos / size) == floor(tn_aabb.min / size)) {
+					break;
+				}
+				size *= vec3(TREE_NUM_DIVISIONS_PER_NODE);
+			}
+
+			// exit node(s)
+			if (j < 0)
 				break;
-			--cur_layer;
+			cur_layer = j;
 		}
-		// n_iters--;
 	}
 
 	uint64_t clock_after_rt = clockRealtimeEXT();
-	
+
 	uint64_t clock_diff_rt = clock_after_rt - clock_before_rt;
 	// imageStore(output_color_image, iuv, vec4(colormap_inferno(float(clock_diff_rt)/1000.0/1000.0), 1.0));
 
