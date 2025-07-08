@@ -76,4 +76,4 @@ compositor = SubResource("Compositor_41ayo")
 mesh = SubResource("BoxMesh_wb71e")
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(-0.00436893, -0.104528, 0.994512, 0, 0.994522, 0.104529, -0.99999, 0.000456681, -0.004345, 25.9731, 9.05694, 8.38082)
+transform = Transform3D(-0.82651, 0.379974, -0.415332, 0, 0.737815, 0.675003, 0.562922, 0.557897, -0.609811, 26.2235, 25.7813, 9.03403)
