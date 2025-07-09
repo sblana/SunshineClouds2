@@ -636,10 +636,10 @@ func _render_callback(effect_callback_type, render_data):
 			if (!positionQuerying && !positionResetting && positionQueries.size() > 0):
 				encode_sample_points()
 			
-			var prepass_x_groups = ((size.x - 1) / 32) + 1
-			var prepass_y_groups = ((size.y - 1) / 32) + 1
-			var x_groups = ((size.x - 1) / 32 / resscale) + 1
-			var y_groups = ((size.y - 1) / 32 / resscale) + 1
+			var prepass_x_groups = ((size.x - 1) / 8) + 1
+			var prepass_y_groups = ((size.y - 1) / 8) + 1
+			var x_groups = ((size.x - 1) / 8 / resscale) + 1
+			var y_groups = ((size.y - 1) / 8 / resscale) + 1
 			
 			for view in view_count:
 				if (msaa):
