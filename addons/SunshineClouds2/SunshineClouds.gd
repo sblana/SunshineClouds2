@@ -84,11 +84,11 @@ class_name SunshineCloudsGD
 @export var origin_offset : Vector3 = Vector3.ZERO
 @export_subgroup("Positions")
 @export var wind_direction : Vector3 = Vector3.ZERO
-@export var extra_large_scale_clouds_position : Vector3 = Vector3.ZERO
-@export var large_scale_clouds_position : Vector3 = Vector3.ZERO
-@export var medium_scale_clouds_position : Vector3 = Vector3.ZERO
-@export var detail_clouds_position : Vector3 = Vector3.ZERO
-@export var current_time : float = 0.0
+var extra_large_scale_clouds_position : Vector3 = Vector3.ZERO
+var large_scale_clouds_position : Vector3 = Vector3.ZERO
+var medium_scale_clouds_position : Vector3 = Vector3.ZERO
+var detail_clouds_position : Vector3 = Vector3.ZERO
+var current_time : float = 0.0
 
 @export_subgroup("Lights")
 @export var directional_lights_data : Array[Vector4] = []

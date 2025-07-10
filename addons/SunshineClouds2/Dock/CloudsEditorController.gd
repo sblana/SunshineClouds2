@@ -60,7 +60,6 @@ var last_image_data : PackedByteArray = []
 
 var pause_updates : bool = false
 
-var version_change : bool = false
 
 func _enter_tree() -> void:
 	drawScale = DefaultBrushSize
@@ -87,8 +86,10 @@ func _process(delta: float) -> void:
 
 func InitialSceneLoad() -> void:
 	var sceneRoot = await FindSceneNode()
-	
+	SceneChanged(sceneRoot)
 	print("initial scene load")
+	
+	await get_tree().create_timer(0.5).timeout
 	var version_info = Engine.get_version_info()
 	
 	var file = FileAccess.open("res://addons/SunshineClouds2/CloudsInc.txt", FileAccess.READ_WRITE)
@@ -104,13 +105,16 @@ func InitialSceneLoad() -> void:
 		file.close()
 		
 		EditorInterface.get_resource_filesystem().reimport_files(["res://addons/SunshineClouds2/SunshineCloudsCompute.glsl", "res://addons/SunshineClouds2/SunshineCloudsPostCompute.glsl", "res://addons/SunshineClouds2/SunshineCloudsPreCompute.glsl"])
-		version_change = true
+		await get_tree().create_timer(0.1).timeout
+		if driver != null && driver.clouds_resource != null:
+			driver.clouds_resource.refresh_compute()
+		
+		print("Version change may cause some errors during first load, these should not impact functionality, if there is impacted functionality please report it to the creator of the plugin.")
 		print("Version updated, launching normally.")
 	else:
 		print("Version correct, launching normally.")
 		file.close()
 	
-	SceneChanged(sceneRoot)
 
 func RefreshSceneNode() -> void:
 	var sceneRoot = await FindSceneNode()

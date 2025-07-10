@@ -58,10 +58,10 @@ class_name SunshineCloudsDriverGD
 @export var medium_structures_wind_speed: float = 40.0
 @export var small_structures_wind_speed: float = 12.0
 @export_group("Internal Use")
-@export var extra_large_clouds_pos: Vector3 = Vector3.ZERO
-@export var large_clouds_pos: Vector3 = Vector3.ZERO
-@export var medium_clouds_pos: Vector3 = Vector3.ZERO
-@export var small_clouds_pos: Vector3 = Vector3.ZERO
+var extra_large_clouds_pos: Vector3 = Vector3.ZERO
+var large_clouds_pos: Vector3 = Vector3.ZERO
+var medium_clouds_pos: Vector3 = Vector3.ZERO
+var small_clouds_pos: Vector3 = Vector3.ZERO
 
 var _extralarge_clouds_domain: float = 0.0
 var _large_clouds_domain: float = 0.0
