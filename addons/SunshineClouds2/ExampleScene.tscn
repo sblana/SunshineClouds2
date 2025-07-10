@@ -75,8 +75,8 @@ feel free to try turning down the settings."
 font_size = 128
 
 [node name="OmniLight3D" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10478.3, 4477.77, -39700.5)
-light_color = Color(0.847843, 0.416966, 0.199327, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10743.6, 6693.89, -43458.2)
+light_color = Color(0.76, 0.374933, 0.1824, 1)
 light_energy = 11.685
 omni_range = 20000.0
 
@@ -89,6 +89,7 @@ metadata/_custom_type_script = "uid://bxlm4e5qfb7uu"
 
 [node name="SunshineCloudsDriverGD" type="Node" parent="." node_paths=PackedStringArray("tracked_directional_lights", "tracked_point_lights", "tracked_point_effectors")]
 script = ExtResource("3_unbdf")
+update_continuously = true
 clouds_resource = ExtResource("1_nv18y")
 ambience_sample_environment = SubResource("Environment_ftegy")
 tracked_directional_lights = [NodePath("../DirectionalLight3D")]
@@ -96,12 +97,8 @@ tracked_directional_light_shadow_steps = Array[int]([32])
 tracked_point_lights = [NodePath("../OmniLight3D")]
 tracked_point_effectors = [NodePath("../SunshineCloudsEffector")]
 origin_offset = Vector3(1000, 0, 0)
-extra_large_structures_wind_speed = 1400.0
-large_structures_wind_speed = 1000.0
-medium_structures_wind_speed = 400.0
-small_structures_wind_speed = 120.0
-extra_large_clouds_pos = Vector3(157278, 0, -107374)
-large_clouds_pos = Vector3(45459.5, 0, 42751.5)
-medium_clouds_pos = Vector3(-7667.43, 0, 716.774)
-small_clouds_pos = Vector3(2694.39, -2897.36, 3698.32)
+extra_large_clouds_pos = Vector3(92086.6, 0, 147506)
+large_clouds_pos = Vector3(41914.7, 0, 39212)
+medium_clouds_pos = Vector3(-3331.17, 0, 5054.56)
+small_clouds_pos = Vector3(2132.68, -3456.72, 3137.55)
 metadata/_custom_type_script = "uid://djusduuxf0voj"

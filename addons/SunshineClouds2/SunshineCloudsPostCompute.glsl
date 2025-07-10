@@ -1,6 +1,8 @@
 #[compute]
 #version 450
 
+#include "./CloudsInc.glsl"
+
 #define PI 3.141592
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
@@ -12,75 +14,8 @@ layout(rgba16f, binding = 3) uniform image2D color_image;
 layout(binding = 4) uniform sampler2D depth_image;
 
 layout(binding = 5) uniform uniformBuffer {
-	mat4 view;
-	mat4 prevview;
-	mat4 proj;
-	mat4 prevproj;
-
-	vec3 extralargenoiseposition;
-	float extralargenoisescale;
-
-	vec3 largenoiseposition;
-	float cloud_lighting_sharpness;
-
-	vec3 mediumnoiseposition;
-	float lighting_step_distance;
-
-	vec3 smallnoiseposition;
-	float atmospheric_density;
-
-	vec4 ambientLightColor;
-	vec4 ambientGroundLightColor;
-	vec4 ambientfogdistancecolor;
-	
-	float small_noise_scale;
-	float min_step_distance;
-	float max_step_distance;
-	float lod_bias;
-
-	float cloud_sharpness;
-	float directionalLightsCount;
-	float reserveda;
-	float anisotropy;
-
-	float cloud_floor;
-	float cloud_ceiling;
-	float max_step_count;
-	float max_lighting_step_count;
-
-	float filterIndex;
-	float blurPower;
-	float blurQuality;
-	float curlPower;
-
-	vec2 WindDirection;
-	float fogEffectGround;
-	float samplePointsCount;
-
-	float pointLightsCount;
-	float pointEffectorCount;
-	vec2 reservedb;
+	GenericData data;
 } genericData;
-
-
-struct DirectionalLight {
-	vec4 direction; //w = shadow sample count
-	vec4 color; //a = intensity
-};
-
-struct PointLight {
-	vec4 position; //w = radius
-	vec4 color; //a = intensity
-};
-
-struct PointEffector {
-	vec3 position; //w = radius
-	float radius;
-
-	float power;
-	float attenuation;
-	vec2 reserved;
-};
 
 layout(binding = 6) uniform LightsBuffer {
 	DirectionalLight directionalLights[4];
@@ -88,13 +23,11 @@ layout(binding = 6) uniform LightsBuffer {
 	PointEffector pointEffectors[64];
 };
 
+layout(binding = 7, std140) uniform SceneDataBlock {
+	SceneData data;
+	SceneData prev_data;
+} scene_data_block;
 
-// Our push constant
-layout(push_constant, std430) uniform Params {
-    vec2 input_size;
-	float resolutionscale;
-    float reserved;
-} params;
 
 // Helpers
 float remap(float value, float min1, float max1, float min2, float max2) {
@@ -349,31 +282,32 @@ vec4 sampleAllAtmospherics(
 
 void main() {
     ivec2 uv = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 lowres_size = ivec2(params.input_size);
+    ivec2 lowres_size = ivec2(genericData.data.raster_size);
 
-    int resolutionScale = int(params.resolutionscale);
+    int resolutionScale = int(genericData.data.resolutionscale);
     ivec2 size = lowres_size * resolutionScale;
 
     vec2 depthUV = (vec2(uv) + vec2(1.0, 0.0)) / vec2(size);
 	depthUV = clamp(depthUV, vec2(0.0), vec2(1.0));
 	float depth = texture(depth_image, depthUV).r;
-	vec4 view = inverse(genericData.proj) * vec4(depthUV*2.0-1.0,depth,1.0);
+	vec4 view = inverse(scene_data_block.data.projection_matrix) * vec4(depthUV*2.0-1.0,depth,1.0);
 	view.xyz /= view.w;
 	float linear_depth = length(view); //used to calculate depth based on the view angle, idk just works.
-    
-    vec2 clipUV = vec2(depthUV.x, depthUV.y);
+
+	// Convert screen coordinates to normalized device coordinates
+	vec2 clipUV = vec2(depthUV.x, depthUV.y);
 	vec2 ndc = clipUV * 2.0 - 1.0;	
 	// Convert NDC to view space coordinates
 	vec4 clipPos = vec4(ndc, 0.0, 1.0);
-	vec4 viewPos = inverse(genericData.proj) * clipPos;
+	vec4 viewPos = inverse(scene_data_block.data.projection_matrix) * clipPos;
 	viewPos.xyz /= viewPos.w;
 	
 	vec3 rd_world = normalize(viewPos.xyz);
-	rd_world = mat3(genericData.view) * rd_world;
+	rd_world = mat3(scene_data_block.data.main_cam_inv_view_matrix) * rd_world;
 	// Define the ray properties
 	
 	vec3 raydirection = normalize(rd_world);
-	vec3 rayOrigin = genericData.view[3].xyz; //center of camera for the ray origin, not worried about the screen width playing in, as it's for clouds.
+	vec3 rayOrigin = scene_data_block.data.main_cam_inv_view_matrix[3].xyz; //center of camera for the ray origin, not worried about the screen width playing in, as it's for clouds.
 
 
 	vec2 tempuv = vec2(uv);
@@ -393,18 +327,18 @@ void main() {
 	}
 	
 
-	float minstep = genericData.min_step_distance;
-	float maxstep = genericData.max_step_distance;
+	float minstep = genericData.data.min_step_distance;
+	float maxstep = genericData.data.max_step_distance;
 	
-	float blurPower = genericData.blurPower;
-	float maxTheoreticalStep = genericData.max_step_count * maxstep;
+	float blurPower = genericData.data.blurPower;
+	float maxTheoreticalStep = genericData.data.max_step_count * maxstep;
 
 	blurPower = mix(blurPower, 0.0, currentColorData.b / maxTheoreticalStep);
 
 	if (blurPower > 0.0){
 		float blurHorizontal = blurPower / float(size.x);
 		float blurVertical = blurPower / float(size.y);
-		float blurQuality = genericData.blurQuality;
+		float blurQuality = genericData.data.blurQuality;
 		//currentColorData = radialBlurData(currentColorData, linear_depth, input_data_image, accumUV, blurQuality * 4.0, blurVertical, blurHorizontal, blurQuality);
 		currentAccumilation = radialBlurColor(currentAccumilation, input_color_image, input_data_image, accumUV, lowres_sizefloat, currentColorData.g, blurQuality * 4.0, blurVertical, blurHorizontal, blurQuality);
 		
@@ -443,13 +377,13 @@ void main() {
 		// traveledDistance = linear_depth;
 	}
 	density *= smoothstep(minstep, maxstep, linear_depth);
-	float groundLinearFade = mix(smoothstep(maxTheoreticalStep, maxTheoreticalStep, linear_depth), 1.0, genericData.fogEffectGround);
+	float groundLinearFade = mix(smoothstep(maxTheoreticalStep, maxTheoreticalStep, linear_depth), 1.0, genericData.data.fogEffectGround);
 
     vec4 color = imageLoad(color_image, uv);
 
-	vec3 ambientfogdistancecolor = genericData.ambientfogdistancecolor.rgb * genericData.ambientfogdistancecolor.a;
-    float atmosphericDensity = genericData.atmospheric_density;
-	float directionalLightCount = genericData.directionalLightsCount;
+	vec3 ambientfogdistancecolor = genericData.data.ambientfogdistancecolor.rgb * genericData.data.ambientfogdistancecolor.a;
+    float atmosphericDensity = genericData.data.atmospheric_density;
+	float directionalLightCount = genericData.data.directionalLightsCount;
 	if (directionalLightCount > 0.0){
 		for (float i = 0.0; i < directionalLightCount; i++){
 			DirectionalLight light = directionalLights[int(i)];

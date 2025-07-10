@@ -123,9 +123,6 @@ var light_data_buffer : RID = RID()
 var point_sample_data_buffer : RID = RID()
 var accumulation_textures : Array[RID] = []
 var resized_depth : RID = RID()
-var push_constants : PackedByteArray
-var prepass_push_constants : PackedByteArray
-var postpass_push_constants : PackedByteArray
 var last_size : Vector2i = Vector2i(0, 0)
 var color_images : Array[RID] = []
 var msaa_color_images : Array[RID] = []
@@ -140,8 +137,6 @@ var light_data : PackedByteArray
 
 var accumulation_is_a : bool = false
 
-var last_view_mat : Transform3D
-var last_projection_mat : Projection
 var first_run : bool = true
 var filter_index = 0
 
@@ -325,6 +320,7 @@ func _render_callback(effect_callback_type, render_data):
 	elif pipeline.is_valid() and height_gradient and extra_large_noise_patterns and large_scale_noise and medium_scale_noise and small_scale_noise and dither_noise and curl_noise:
 		buffers = render_data.get_render_scene_buffers() as RenderSceneBuffersRD
 		if buffers:
+			
 			var msaa = buffers.get_msaa_3d() != 0
 			if msaa:
 				return
@@ -333,41 +329,27 @@ func _render_callback(effect_callback_type, render_data):
 			if size.x == 0 and size.y == 0:
 				return
 			
-			var resscale = 1
-			match resolution_scale:
-				0: 
-					resscale = 1
-				1: 
-					resscale = 2
-				2: 
-					resscale = 4
-				3: 
-					resscale = 8
+			var resscale = int(pow(2.0, float(resolution_scale)))
+			#match resolution_scale:
+				#0: 
+					#resscale = 1
+				#1: 
+					#resscale = 2
+				#2: 
+					#resscale = 4
+				#3: 
+					#resscale = 8
 			
 			var new_size = size / resscale
 			var view_count = buffers.get_view_count()
+			var rendersceneData : RenderSceneData = render_data.get_render_scene_data();
+			
 			if size != last_size or uniform_sets == null or uniform_sets.size() != view_count * 3 or color_images.size() == 0 or color_images[0] != buffers.get_color_layer(0):
 				initialize_compute()
 				
 				accumulation_textures.clear()
 				uniform_sets.clear()
-				
-				var prepass_data_ms = StreamPeerBuffer.new()
-				prepass_data_ms.put_float(size.x)
-				prepass_data_ms.put_float(size.y)
-				prepass_data_ms.put_float(resscale)
-				prepass_data_ms.put_float(0.0)
-				
-				prepass_push_constants = prepass_data_ms.data_array
-				#print("prepass_push_constants",prepass_push_constants.size())
-				
-				var postpass_data_ms = StreamPeerBuffer.new()
-				postpass_data_ms.put_float(new_size.x)
-				postpass_data_ms.put_float(new_size.y)
-				postpass_data_ms.put_float(resscale)
-				postpass_data_ms.put_float(0.0)
-				
-				postpass_push_constants = postpass_data_ms.data_array
+
 				color_images.clear()
 				msaa_color_images.clear()
 				
@@ -402,6 +384,7 @@ func _render_callback(effect_callback_type, render_data):
 					#reflections
 					accumulation_textures.append(rd.texture_create(base_colorformat, RDTextureView.new(), [blankImageData]))
 					
+					general_data_buffer = rd.uniform_buffer_create(256)
 					
 					var depthformat : RDTextureFormat = rd.texture_get_format(depth_image)
 					depthformat.width = new_size.x
@@ -424,6 +407,13 @@ func _render_callback(effect_callback_type, render_data):
 					prepass_depth_output_uniform.binding = 1
 					prepass_depth_output_uniform.add_id(resized_depth)
 					prepass_uniforms_array.append(prepass_depth_output_uniform)
+					
+					var prepass_camera_uniform = RDUniform.new()
+					prepass_camera_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_UNIFORM_BUFFER
+					prepass_camera_uniform.binding = 2
+					prepass_camera_uniform.add_id(general_data_buffer)
+					prepass_uniforms_array.append(prepass_camera_uniform)
+					
 					uniform_sets.append(rd.uniform_set_create(prepass_uniforms_array, prepass_shader, 0))
 					
 					#Base Compute Shader
@@ -520,7 +510,7 @@ func _render_callback(effect_callback_type, render_data):
 					height_gradient_uniform.add_id(RenderingServer.texture_get_rd_texture(height_gradient.get_rid()))
 					uniforms_array.append(height_gradient_uniform)
 					
-					general_data_buffer = rd.uniform_buffer_create(464)
+					
 					var camera_uniform = RDUniform.new()
 					camera_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_UNIFORM_BUFFER
 					camera_uniform.binding = 14
@@ -543,6 +533,13 @@ func _render_callback(effect_callback_type, render_data):
 					point_sample_data_uniform.add_id(point_sample_data_buffer)
 					uniforms_array.append(point_sample_data_uniform)
 					
+					var cameraData = rendersceneData.get_uniform_buffer()
+					var camera_data_uniform = RDUniform.new()
+					camera_data_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_UNIFORM_BUFFER
+					camera_data_uniform.binding = 17
+					camera_data_uniform.add_id(cameraData)
+					uniforms_array.append(camera_data_uniform)
+					
 					uniform_sets.append(rd.uniform_set_create(uniforms_array, shader, 0))
 					
 					#Post Pass Compute Shader
@@ -560,6 +557,7 @@ func _render_callback(effect_callback_type, render_data):
 					prepass_color_uniform.add_id(linear_sampler_no_repeat)
 					prepass_color_uniform.add_id(accumulation_textures[view * 7 + 1])
 					postpass_uniforms_array.append(prepass_color_uniform)
+					
 					
 					var postpass_reflections_uniform = RDUniform.new()
 					postpass_reflections_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_IMAGE
@@ -597,39 +595,46 @@ func _render_callback(effect_callback_type, render_data):
 					postpass_light_data_uniform.add_id(light_data_buffer)
 					postpass_uniforms_array.append(postpass_light_data_uniform)
 					
+					var postpass_camera_data_uniform = RDUniform.new()
+					postpass_camera_data_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_UNIFORM_BUFFER
+					postpass_camera_data_uniform.binding = 7
+					postpass_camera_data_uniform.add_id(cameraData)
+					postpass_uniforms_array.append(postpass_camera_data_uniform)
+					
 					uniform_sets.append(rd.uniform_set_create(postpass_uniforms_array, postpass_shader, 0))
 				
 				lights_updated = true
 			
 			# Push constants and matrix updates
-			var ms = StreamPeerBuffer.new()
-			ms.put_float(new_size.x)
-			ms.put_float(new_size.y)
-			ms.put_float(large_noise_scale)
-			ms.put_float(medium_noise_scale)
+			#var ms = StreamPeerBuffer.new()
+			#ms.put_float(new_size.x)
+			#ms.put_float(new_size.y)
+			#ms.put_float(large_noise_scale)
+			#ms.put_float(medium_noise_scale)
+			#
+			#ms.put_float(current_time)
+			#ms.put_float(clouds_coverage)
+			#ms.put_float(clouds_density)
+			#ms.put_float(clouds_detail_power)
+			#
+			#ms.put_float(lighting_density)
+			#ms.put_float(accumulation_decay)
+			#if (accumulation_is_a):
+				#ms.put_float(1.0)
+			#else:
+				#ms.put_float(0.0)
+			#ms.put_float(0.0)
+			#push_constants = ms.get_data_array()
 			
-			ms.put_float(current_time)
-			ms.put_float(clouds_coverage)
-			ms.put_float(clouds_density)
-			ms.put_float(clouds_detail_power)
-			
-			ms.put_float(lighting_density)
-			ms.put_float(accumulation_decay)
-			if (accumulation_is_a):
-				ms.put_float(1.0)
-			else:
-				ms.put_float(0.0)
-			ms.put_float(0.0)
-			push_constants = ms.get_data_array()
 			
 			
-			var rendersceneData : RenderSceneData = render_data.get_render_scene_data();
 			var cameraTR : Transform3D = rendersceneData.get_cam_transform();
 			var viewProj : Projection = rendersceneData.get_cam_projection();
 			
+			
 			last_size = size
 			
-			update_matrices(cameraTR, viewProj)
+			update_matrices(cameraTR, viewProj, new_size)
 			if lights_updated or directional_lights_data.size() == 0:
 				update_lights()
 			
@@ -648,21 +653,18 @@ func _render_callback(effect_callback_type, render_data):
 				var prepass_list = rd.compute_list_begin()
 				rd.compute_list_bind_compute_pipeline(prepass_list, prepass_pipeline)
 				rd.compute_list_bind_uniform_set(prepass_list, uniform_sets[view * 3], 0)
-				rd.compute_list_set_push_constant(prepass_list, prepass_push_constants, prepass_push_constants.size())
 				rd.compute_list_dispatch(prepass_list, x_groups, y_groups, 1)
 				rd.compute_list_end()
 
 				var compute_list = rd.compute_list_begin()
 				rd.compute_list_bind_compute_pipeline(compute_list, pipeline)
 				rd.compute_list_bind_uniform_set(compute_list, uniform_sets[view * 3 + 1], 0)
-				rd.compute_list_set_push_constant(compute_list, push_constants, push_constants.size())
 				rd.compute_list_dispatch(compute_list, x_groups, y_groups, 1)
 				rd.compute_list_end()
 
 				var postpass_list = rd.compute_list_begin()
 				rd.compute_list_bind_compute_pipeline(postpass_list, postpass_pipeline)
 				rd.compute_list_bind_uniform_set(postpass_list, uniform_sets[view * 3 + 2], 0)
-				rd.compute_list_set_push_constant(postpass_list, postpass_push_constants, postpass_push_constants.size())
 				rd.compute_list_dispatch(postpass_list, prepass_x_groups, prepass_y_groups, 1)
 				rd.compute_list_end()
 				
@@ -711,102 +713,102 @@ func update_callbacktype(lastY : float):
 		if (self.effect_callback_type != CompositorEffect.EFFECT_CALLBACK_TYPE_PRE_TRANSPARENT):
 			self.effect_callback_type = CompositorEffect.EFFECT_CALLBACK_TYPE_PRE_TRANSPARENT
 
-func update_matrices(camera_tr, view_proj):
-	if general_data.size() != 464: #32+32+44 * 4 bytes for each float = 432.
-		general_data.resize(464)
+func update_matrices(camera_tr, view_proj, new_size: Vector2i):
+	if general_data.size() != 256: #64 * 4 bytes for each float = 256.
+		general_data.resize(256)
 	
 	var idx = 0
 	filter_index += 1
 	if filter_index > 16:
 		filter_index = 0
-		# Camera matrix (16 floats)
-	general_data.encode_float(idx, camera_tr.basis.x.x); idx += 4
-	general_data.encode_float(idx, camera_tr.basis.x.y); idx += 4
-	general_data.encode_float(idx, camera_tr.basis.x.z); idx += 4
-	general_data.encode_float(idx, 0); idx += 4
-	
-	general_data.encode_float(idx, camera_tr.basis.y.x); idx += 4
-	general_data.encode_float(idx, camera_tr.basis.y.y); idx += 4
-	general_data.encode_float(idx, camera_tr.basis.y.z); idx += 4
-	general_data.encode_float(idx, 0); idx += 4
-	
-	general_data.encode_float(idx, camera_tr.basis.z.x); idx += 4
-	general_data.encode_float(idx, camera_tr.basis.z.y); idx += 4
-	general_data.encode_float(idx, camera_tr.basis.z.z); idx += 4
-	general_data.encode_float(idx, 0); idx += 4
-	
-	general_data.encode_float(idx, camera_tr.origin.x); idx += 4
-	general_data.encode_float(idx, camera_tr.origin.y); idx += 4
-	general_data.encode_float(idx, camera_tr.origin.z); idx += 4
-	general_data.encode_float(idx, 1.0); idx += 4
-
-	# Previous or current camera matrix
-	var mat = camera_tr if first_run else last_view_mat
-	general_data.encode_float(idx, mat.basis.x.x); idx += 4
-	general_data.encode_float(idx, mat.basis.x.y); idx += 4
-	general_data.encode_float(idx, mat.basis.x.z); idx += 4
-	general_data.encode_float(idx, 0); idx += 4
-	
-	general_data.encode_float(idx, mat.basis.y.x); idx += 4
-	general_data.encode_float(idx, mat.basis.y.y); idx += 4
-	general_data.encode_float(idx, mat.basis.y.z); idx += 4
-	general_data.encode_float(idx, 0); idx += 4
-	
-	general_data.encode_float(idx, mat.basis.z.x); idx += 4
-	general_data.encode_float(idx, mat.basis.z.y); idx += 4
-	general_data.encode_float(idx, mat.basis.z.z); idx += 4
-	general_data.encode_float(idx, 0); idx += 4
-	
-	general_data.encode_float(idx, mat.origin.x); idx += 4
-	general_data.encode_float(idx, mat.origin.y); idx += 4
-	general_data.encode_float(idx, mat.origin.z); idx += 4
-	general_data.encode_float(idx, 1.0); idx += 4
-
-	# Projection matrix (16 floats)
-	general_data.encode_float(idx, view_proj.x.x); idx += 4
-	general_data.encode_float(idx, view_proj.x.y); idx += 4
-	general_data.encode_float(idx, view_proj.x.z); idx += 4
-	general_data.encode_float(idx, view_proj.x.w); idx += 4
-	
-	general_data.encode_float(idx, view_proj.y.x); idx += 4
-	general_data.encode_float(idx, view_proj.y.y); idx += 4
-	general_data.encode_float(idx, view_proj.y.z); idx += 4
-	general_data.encode_float(idx, view_proj.y.w); idx += 4
-	
-	general_data.encode_float(idx, view_proj.z.x); idx += 4
-	general_data.encode_float(idx, view_proj.z.y); idx += 4
-	general_data.encode_float(idx, view_proj.z.z); idx += 4
-	general_data.encode_float(idx, view_proj.z.w); idx += 4
-	
-	general_data.encode_float(idx, view_proj.w.x); idx += 4
-	general_data.encode_float(idx, view_proj.w.y); idx += 4
-	general_data.encode_float(idx, view_proj.w.z); idx += 4
-	general_data.encode_float(idx, view_proj.w.w); idx += 4
-
-	# Previous or current camera matrix
-	var proj = view_proj if first_run else last_projection_mat
-	general_data.encode_float(idx, proj.x.x); idx += 4
-	general_data.encode_float(idx, proj.x.y); idx += 4
-	general_data.encode_float(idx, proj.x.z); idx += 4
-	general_data.encode_float(idx, proj.x.w); idx += 4
-	
-	general_data.encode_float(idx, proj.y.x); idx += 4
-	general_data.encode_float(idx, proj.y.y); idx += 4
-	general_data.encode_float(idx, proj.y.z); idx += 4
-	general_data.encode_float(idx, proj.y.w); idx += 4
-	
-	general_data.encode_float(idx, proj.z.x); idx += 4
-	general_data.encode_float(idx, proj.z.y); idx += 4
-	general_data.encode_float(idx, proj.z.z); idx += 4
-	general_data.encode_float(idx, proj.z.w); idx += 4
-	
-	general_data.encode_float(idx, proj.w.x); idx += 4
-	general_data.encode_float(idx, proj.w.y); idx += 4
-	general_data.encode_float(idx, proj.w.z); idx += 4
-	general_data.encode_float(idx, proj.w.w); idx += 4
-
-	last_projection_mat = view_proj
-	last_view_mat = camera_tr
+	# Camera matrix (16 floats)
+	#general_data.encode_float(idx, camera_tr.basis.x.x); idx += 4
+	#general_data.encode_float(idx, camera_tr.basis.x.y); idx += 4
+	#general_data.encode_float(idx, camera_tr.basis.x.z); idx += 4
+	#general_data.encode_float(idx, 0); idx += 4
+	#
+	#general_data.encode_float(idx, camera_tr.basis.y.x); idx += 4
+	#general_data.encode_float(idx, camera_tr.basis.y.y); idx += 4
+	#general_data.encode_float(idx, camera_tr.basis.y.z); idx += 4
+	#general_data.encode_float(idx, 0); idx += 4
+	#
+	#general_data.encode_float(idx, camera_tr.basis.z.x); idx += 4
+	#general_data.encode_float(idx, camera_tr.basis.z.y); idx += 4
+	#general_data.encode_float(idx, camera_tr.basis.z.z); idx += 4
+	#general_data.encode_float(idx, 0); idx += 4
+	#
+	#general_data.encode_float(idx, camera_tr.origin.x); idx += 4
+	#general_data.encode_float(idx, camera_tr.origin.y); idx += 4
+	#general_data.encode_float(idx, camera_tr.origin.z); idx += 4
+	#general_data.encode_float(idx, 1.0); idx += 4
+#
+	## Previous or current camera matrix
+	#var mat = camera_tr if first_run else last_view_mat
+	#general_data.encode_float(idx, mat.basis.x.x); idx += 4
+	#general_data.encode_float(idx, mat.basis.x.y); idx += 4
+	#general_data.encode_float(idx, mat.basis.x.z); idx += 4
+	#general_data.encode_float(idx, 0); idx += 4
+	#
+	#general_data.encode_float(idx, mat.basis.y.x); idx += 4
+	#general_data.encode_float(idx, mat.basis.y.y); idx += 4
+	#general_data.encode_float(idx, mat.basis.y.z); idx += 4
+	#general_data.encode_float(idx, 0); idx += 4
+	#
+	#general_data.encode_float(idx, mat.basis.z.x); idx += 4
+	#general_data.encode_float(idx, mat.basis.z.y); idx += 4
+	#general_data.encode_float(idx, mat.basis.z.z); idx += 4
+	#general_data.encode_float(idx, 0); idx += 4
+	#
+	#general_data.encode_float(idx, mat.origin.x); idx += 4
+	#general_data.encode_float(idx, mat.origin.y); idx += 4
+	#general_data.encode_float(idx, mat.origin.z); idx += 4
+	#general_data.encode_float(idx, 1.0); idx += 4
+#
+	## Projection matrix (16 floats)
+	#general_data.encode_float(idx, view_proj.x.x); idx += 4
+	#general_data.encode_float(idx, view_proj.x.y); idx += 4
+	#general_data.encode_float(idx, view_proj.x.z); idx += 4
+	#general_data.encode_float(idx, view_proj.x.w); idx += 4
+	#
+	#general_data.encode_float(idx, view_proj.y.x); idx += 4
+	#general_data.encode_float(idx, view_proj.y.y); idx += 4
+	#general_data.encode_float(idx, view_proj.y.z); idx += 4
+	#general_data.encode_float(idx, view_proj.y.w); idx += 4
+	#
+	#general_data.encode_float(idx, view_proj.z.x); idx += 4
+	#general_data.encode_float(idx, view_proj.z.y); idx += 4
+	#general_data.encode_float(idx, view_proj.z.z); idx += 4
+	#general_data.encode_float(idx, view_proj.z.w); idx += 4
+	#
+	#general_data.encode_float(idx, view_proj.w.x); idx += 4
+	#general_data.encode_float(idx, view_proj.w.y); idx += 4
+	#general_data.encode_float(idx, view_proj.w.z); idx += 4
+	#general_data.encode_float(idx, view_proj.w.w); idx += 4
+#
+	## Previous or current camera matrix
+	#var proj = view_proj if first_run else last_projection_mat
+	#general_data.encode_float(idx, proj.x.x); idx += 4
+	#general_data.encode_float(idx, proj.x.y); idx += 4
+	#general_data.encode_float(idx, proj.x.z); idx += 4
+	#general_data.encode_float(idx, proj.x.w); idx += 4
+	#
+	#general_data.encode_float(idx, proj.y.x); idx += 4
+	#general_data.encode_float(idx, proj.y.y); idx += 4
+	#general_data.encode_float(idx, proj.y.z); idx += 4
+	#general_data.encode_float(idx, proj.y.w); idx += 4
+	#
+	#general_data.encode_float(idx, proj.z.x); idx += 4
+	#general_data.encode_float(idx, proj.z.y); idx += 4
+	#general_data.encode_float(idx, proj.z.z); idx += 4
+	#general_data.encode_float(idx, proj.z.w); idx += 4
+	#
+	#general_data.encode_float(idx, proj.w.x); idx += 4
+	#general_data.encode_float(idx, proj.w.y); idx += 4
+	#general_data.encode_float(idx, proj.w.z); idx += 4
+	#general_data.encode_float(idx, proj.w.w); idx += 4
+#
+	#last_projection_mat = view_proj
+	#last_view_mat = camera_tr
 	accumulation_is_a = not accumulation_is_a
 	first_run = false
 	
@@ -888,6 +890,29 @@ func update_matrices(camera_tr, view_proj):
 	general_data.encode_float(idx, float(point_effector_data.size()) / 2.0); idx += 4
 	general_data.encode_float(idx, wind_swept_range); idx += 4
 	general_data.encode_float(idx, wind_swept_strength); idx += 4
+	
+	general_data.encode_float(idx, new_size.x); idx += 4
+	general_data.encode_float(idx, new_size.y); idx += 4
+	general_data.encode_float(idx, large_noise_scale); idx += 4
+	general_data.encode_float(idx, medium_noise_scale); idx += 4
+	
+	general_data.encode_float(idx, current_time); idx += 4
+	general_data.encode_float(idx, clouds_coverage); idx += 4
+	general_data.encode_float(idx, clouds_density); idx += 4
+	general_data.encode_float(idx, clouds_detail_power); idx += 4
+	
+	general_data.encode_float(idx, lighting_density); idx += 4
+	general_data.encode_float(idx, accumulation_decay); idx += 4
+	if (accumulation_is_a):
+		general_data.encode_float(idx, 1.0); idx += 4
+	else:
+		general_data.encode_float(idx, 0.0); idx += 4
+	general_data.encode_float(idx, int(pow(2.0, float(resolution_scale)))); idx += 4
+	#
+	#general_data.encode_float(idx, last_size.x); idx += 4
+	#general_data.encode_float(idx, last_size.y); idx += 4
+	#general_data.encode_float(idx, 0.0); idx += 4
+	#general_data.encode_float(idx, 0.0); idx += 4
 	
 	# Copy to byte buffer
 	rd.buffer_update(general_data_buffer, 0, general_data.size(), general_data)
