@@ -321,7 +321,10 @@ void main() {
 	vec4 view = inverse(scene_data_block.data.projection_matrix) * vec4(depthUV*2.0-1.0,depth,1.0);
 	view.xyz /= view.w;
 	float linear_depth = length(view); //used to calculate depth based on the view angle, idk just works.
-
+	//4.4 doesn't work with this
+	// if (linear_depth > scene_data_block.data.z_far){ 
+	// 	linear_depth *= 100.0;
+	// }
 	
 	// Convert screen coordinates to normalized device coordinates
 	vec2 clipUV = vec2(depthUV.x, depthUV.y);
@@ -379,6 +382,7 @@ void main() {
 
 	float minstep = genericData.data.min_step_distance;
 	float maxstep = genericData.data.max_step_distance;
+	
 
 	float curlPower = genericData.data.curlPower;
 	float lightingStepDistance = genericData.data.lighting_step_distance;

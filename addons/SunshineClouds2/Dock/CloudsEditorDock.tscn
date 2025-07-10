@@ -25,7 +25,7 @@ bg_color = Color(0.0680232, 0.0903094, 0.121509, 0.564706)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ml10g"]
 
-[node name="CloudsEditor" type="Control" node_paths=PackedStringArray("CloudsStatusLabel", "CloudsActiveToggle", "UseMaskToggle", "MaskStatusLabel", "MaskFilePath", "MaskResolution", "MaskWidth", "DrawWeightEnable", "DrawColorEnable", "DrawColorPicker", "DrawTools", "DrawSharpness", "DrawStrength")]
+[node name="CloudsEditor" type="Control" node_paths=PackedStringArray("CloudsStatusLabel", "CloudsActiveToggle", "CloudsDriverRefresh", "CloudsDriverAccordianButton", "CloudsMaskToolsContainer", "UseMaskToggle", "MaskStatusLabel", "MaskFilePath", "MaskResolution", "MaskWidth", "DrawWeightEnable", "DrawColorEnable", "DrawColorPicker", "DrawTools", "DrawSharpness", "DrawStrength")]
 clip_contents = true
 layout_mode = 3
 anchors_preset = 15
@@ -37,6 +37,9 @@ grow_vertical = 2
 script = ExtResource("1_c42ej")
 CloudsStatusLabel = NodePath("ScrollContainer/VBoxContainer/PanelContainer/VBoxContainer/VBoxContainer/Label")
 CloudsActiveToggle = NodePath("ScrollContainer/VBoxContainer/PanelContainer/VBoxContainer/VBoxContainer/CheckButton")
+CloudsDriverRefresh = NodePath("ScrollContainer/VBoxContainer/PanelContainer/VBoxContainer/VBoxContainer/DriverQueryButton")
+CloudsDriverAccordianButton = NodePath("ScrollContainer/VBoxContainer/PanelContainer/VBoxContainer/AccordionButton")
+CloudsMaskToolsContainer = NodePath("ScrollContainer/VBoxContainer/DrawTools")
 UseMaskToggle = NodePath("ScrollContainer/VBoxContainer/DrawTools/VBoxContainer/MaskUsageCheckButton")
 MaskStatusLabel = NodePath("ScrollContainer/VBoxContainer/MaskStatusOutput")
 MaskFilePath = NodePath("ScrollContainer/VBoxContainer/HBoxContainer/LineEdit")
@@ -180,7 +183,6 @@ script = ExtResource("2_wp1ai")
 metadata/_custom_type_script = "uid://cb3ho8b5lgx55"
 
 [node name="VBoxContainer" type="VBoxContainer" parent="ScrollContainer/VBoxContainer/PanelContainer/VBoxContainer"]
-visible = false
 layout_mode = 2
 
 [node name="Label" type="Label" parent="ScrollContainer/VBoxContainer/PanelContainer/VBoxContainer/VBoxContainer"]
@@ -190,6 +192,12 @@ text = "Clouds not present"
 [node name="CheckButton" type="CheckButton" parent="ScrollContainer/VBoxContainer/PanelContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 text = "Clouds Updating"
+
+[node name="DriverQueryButton" type="Button" parent="ScrollContainer/VBoxContainer/PanelContainer/VBoxContainer/VBoxContainer"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Search for Driver"
 
 [node name="DrawTools" type="PanelContainer" parent="ScrollContainer/VBoxContainer"]
 layout_mode = 2
@@ -335,6 +343,7 @@ layout_mode = 2
 [connection signal="value_changed" from="ScrollContainer/VBoxContainer/MaskSettings/VBoxContainer/Resolution/SpinBox" to="." method="UpdateMaskSettings" unbinds=1]
 [connection signal="value_changed" from="ScrollContainer/VBoxContainer/MaskSettings/VBoxContainer/Width/SpinBox" to="." method="UpdateMaskSettings" unbinds=1]
 [connection signal="pressed" from="ScrollContainer/VBoxContainer/PanelContainer/VBoxContainer/VBoxContainer/CheckButton" to="." method="SetCloudsUpdating"]
+[connection signal="pressed" from="ScrollContainer/VBoxContainer/PanelContainer/VBoxContainer/VBoxContainer/DriverQueryButton" to="." method="InitialSceneLoad"]
 [connection signal="pressed" from="ScrollContainer/VBoxContainer/DrawTools/VBoxContainer/MaskUsageCheckButton" to="." method="UpdateMaskSettings"]
 [connection signal="pressed" from="ScrollContainer/VBoxContainer/DrawTools/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/CloudsWeight" to="." method="DrawWeightToggled"]
 [connection signal="pressed" from="ScrollContainer/VBoxContainer/DrawTools/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/CloudsColor" to="." method="DrawColorToggled"]

@@ -16,14 +16,22 @@ func _enter_tree() -> void:
 
 func ButtonPressed():
 	curvisible = !curvisible
+	_handleVisibility()
+
+func Open():
+	curvisible = true
+	_handleVisibility()
+
+func Close():
+	curvisible = false
+	_handleVisibility()
+
+func _handleVisibility():
 	if (!curvisible):
 		icon = ResourceLoader.load("res://addons/SunshineClouds2/Dock/Icons/caret-down-solid.svg")
 	else:
 		icon = ResourceLoader.load("res://addons/SunshineClouds2/Dock/Icons/caret-up-solid.svg")
 	
-	_handleVisibility()
-
-func _handleVisibility():
 	for child in get_parent().get_children():
 		if (child != self and child is Control):
 			child.visible = curvisible

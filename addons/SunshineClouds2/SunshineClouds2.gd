@@ -46,11 +46,7 @@ func _enter_tree() -> void:
 	add_control_to_dock(DOCK_SLOT_LEFT_UR, dock)
 	
 	scene_changed.connect(dock.SceneChanged)
-	
-	
-	var editorInterface = get_editor_interface()
-	var sceneRoot = editorInterface.get_edited_scene_root()
-	dock.SceneChanged(sceneRoot)
+	dock.call_deferred(&"InitialSceneLoad")
 	set_input_event_forwarding_always_enabled()
 
 

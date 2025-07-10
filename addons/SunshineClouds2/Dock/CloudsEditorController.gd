@@ -5,6 +5,8 @@ class_name CloudsEditorController
 @export_category("Driver Tools")
 @export var CloudsStatusLabel : Label
 @export var CloudsActiveToggle : CheckButton
+@export var CloudsDriverRefresh : Button
+@export var CloudsDriverAccordianButton : AccordionButton
 @export_category("Mask Tools")
 @export var UseMaskToggle : CheckButton
 @export var MaskStatusLabel : Label
@@ -66,6 +68,7 @@ func _notification(what):
 		RenderingServer.call_on_render_thread(ClearCompute)
 
 func _process(delta: float) -> void:
+	
 	if (currentDrawMode != DRAWINGMODE.none):
 		
 		var selection = EditorInterface.get_selection()
@@ -80,7 +83,19 @@ func _process(delta: float) -> void:
 			
 			RenderingServer.call_on_render_thread(ExecuteCompute.bindv([delta, false, Color.WHITE]))
 
+func InitialSceneLoad() -> void:
+	var editorInterface = EditorPlugin.new().get_editor_interface()
+	var sceneRoot = editorInterface.get_edited_scene_root()
+	var iterationcount: int = 300 #30 seconds of checking.
+	while sceneRoot == null && iterationcount > 0:
+		await get_tree().create_timer(0.1).timeout
+		iterationcount -= 1
+		sceneRoot = editorInterface.get_edited_scene_root()
+	
+	SceneChanged(sceneRoot)
+
 func SceneChanged(scene_root : Node):
+	print("scene change: ", scene_root.name)
 	pause_updates = true
 	DrawWeightEnable.button_pressed = false
 	DrawColorEnable.button_pressed = false
@@ -120,10 +135,21 @@ func UpdateStatusDisplay():
 	if (driver != null):
 		CloudsActiveToggle.disabled = false
 		CloudsActiveToggle.button_pressed = driver.update_continuously
+		CloudsDriverRefresh.visible = false
 		CloudsStatusLabel.text = "Clouds present"
+		
+		if ResourceLoader.exists(MaskFilePath.text):
+			MaskStatusLabel.text = "Mask Detected: " + MaskFilePath.text
+			DrawTools.visible = true
+		else:
+			MaskStatusLabel.text = "Mask Not Found."
+			DrawTools.visible = false
 	else:
 		CloudsActiveToggle.disabled = true
 		CloudsActiveToggle.button_pressed = false
+		CloudsDriverRefresh.visible = true
+		DrawTools.visible = false
+		CloudsDriverAccordianButton.Open()
 		CloudsStatusLabel.text = "Clouds not present"
 	
 	
@@ -133,12 +159,6 @@ func UpdateStatusDisplay():
 		UseMaskToggle.disabled = true
 		UseMaskToggle.button_pressed = false
 	
-	if ResourceLoader.exists(MaskFilePath.text):
-		MaskStatusLabel.text = "Mask Detected: " + MaskFilePath.text
-		DrawTools.visible = true
-	else:
-		MaskStatusLabel.text = "Mask Not Found."
-		DrawTools.visible = false
 
 func UpdateMaskSettings():
 	if (pause_updates):
