@@ -9,6 +9,8 @@ Beginner tutorial: [https://www.youtube.com/watch?v=aEDDkGIfwDY](https://www.you
 
 ## Updates:
 
+2.2: Lots of bug fixes, implemented more sampling functionality, as well as implementing support for Apple (Metal) and better AMD support, also improved performance and implemented automatic handling of version changes.
+
 2.1: Mostly bug fixes following asset release on the asset library
 
 2.0: Rebuilt from the ground up to use the compositor system, improving performance and visuals.
