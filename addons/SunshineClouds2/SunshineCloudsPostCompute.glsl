@@ -1,7 +1,7 @@
 #[compute]
 #version 450
 
-#include "./CloudsInc.glsl"
+#include "./CloudsInc.txt"
 
 #define PI 3.141592
 

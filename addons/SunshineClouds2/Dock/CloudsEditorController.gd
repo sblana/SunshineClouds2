@@ -60,6 +60,8 @@ var last_image_data : PackedByteArray = []
 
 var pause_updates : bool = false
 
+var version_change : bool = false
+
 func _enter_tree() -> void:
 	drawScale = DefaultBrushSize
 
@@ -84,6 +86,38 @@ func _process(delta: float) -> void:
 			RenderingServer.call_on_render_thread(ExecuteCompute.bindv([delta, false, Color.WHITE]))
 
 func InitialSceneLoad() -> void:
+	var sceneRoot = await FindSceneNode()
+	
+	print("initial scene load")
+	var version_info = Engine.get_version_info()
+	
+	var file = FileAccess.open("res://addons/SunshineClouds2/CloudsInc.txt", FileAccess.READ_WRITE)
+	var content = file.get_as_text()
+	var major_index = content.find("GODOT_VERSION_MAJOR") + 20
+	var minor_index = content.find("GODOT_VERSION_MINOR") + 20
+	
+	if content[major_index] != str(version_info.major) || content[minor_index] != str(version_info.minor):
+		print("Version conflict, updating and reimporting...")
+		content[major_index] = str(version_info.major)
+		content[minor_index] = str(version_info.minor)
+		file.store_string(content)
+		file.close()
+		
+		EditorInterface.get_resource_filesystem().reimport_files(["res://addons/SunshineClouds2/SunshineCloudsCompute.glsl", "res://addons/SunshineClouds2/SunshineCloudsPostCompute.glsl", "res://addons/SunshineClouds2/SunshineCloudsPreCompute.glsl"])
+		version_change = true
+		print("Version updated, launching normally.")
+	else:
+		print("Version correct, launching normally.")
+		file.close()
+	
+	SceneChanged(sceneRoot)
+
+func RefreshSceneNode() -> void:
+	var sceneRoot = await FindSceneNode()
+	
+	SceneChanged(sceneRoot)
+
+func FindSceneNode() -> Node:
 	var editorInterface = EditorPlugin.new().get_editor_interface()
 	var sceneRoot = editorInterface.get_edited_scene_root()
 	var iterationcount: int = 300 #30 seconds of checking.
@@ -92,10 +126,10 @@ func InitialSceneLoad() -> void:
 		iterationcount -= 1
 		sceneRoot = editorInterface.get_edited_scene_root()
 	
-	SceneChanged(sceneRoot)
+	return sceneRoot
 
 func SceneChanged(scene_root : Node):
-	print("scene change: ", scene_root.name)
+	
 	pause_updates = true
 	DrawWeightEnable.button_pressed = false
 	DrawColorEnable.button_pressed = false
@@ -144,6 +178,7 @@ func UpdateStatusDisplay():
 		else:
 			MaskStatusLabel.text = "Mask Not Found."
 			DrawTools.visible = false
+		
 	else:
 		CloudsActiveToggle.disabled = true
 		CloudsActiveToggle.button_pressed = false

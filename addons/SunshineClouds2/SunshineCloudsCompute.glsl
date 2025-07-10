@@ -3,7 +3,7 @@
 #define PI 3.141592
 #define ABSORPTION_COEFFICIENT 0.9
 
-#include "./CloudsInc.glsl"
+#include "./CloudsInc.txt"
 
 // Invocations in the (x, y, z) dimension
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
