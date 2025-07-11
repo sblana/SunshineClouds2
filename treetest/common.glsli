@@ -407,3 +407,13 @@ RayAABBIntersectionExitOnly intersect_inv_ray_with_aabb_exit_only(vec3 inv_ray_d
 
 	return RayAABBIntersectionExitOnly(t_f, t_f_i);
 }
+
+uint FPM_octree_closest_child(vec3 pos, uint size_exp) {
+	uvec3 xyz = (floatBitsToUint(pos) >> size_exp) & 1u;
+	return xyz.x + xyz.y * 2u + xyz.z * 4u;
+}
+
+vec3 FPM_floor_size(vec3 pos, uint size_exp) {
+	uint mask = (~0u) << size_exp;
+	return uintBitsToFloat(floatBitsToUint(pos) & mask);
+}
