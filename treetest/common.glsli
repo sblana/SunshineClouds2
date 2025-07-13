@@ -145,10 +145,10 @@ TreeNodeData tree_node_data_init() {
 	// return TreeNodeData(0, 0, false, 0.0, TreeNodeAABB(vec3(0.0), 0));
 }
 
-#define TREE_NUM_MAX_LAYERS (7)
-#define TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X (2)
-#define TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Y (2)
-#define TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Z (2)
+#define TREE_NUM_MAX_LAYERS (4)
+#define TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X (4)
+#define TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Y (4)
+#define TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Z (4)
 #define TREE_NUM_DIVISIONS_PER_NODE uvec3(TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X, TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Y, TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Z)
 #define TREE_NUM_CHILDREN_PER_NODE (TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_X * TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Y * TREE_NUM_DIVISIONS_PER_NODE_IN_AXIS_Z)
 // todo: figure out how many maximum nodes we can actually have
@@ -409,8 +409,8 @@ RayAABBIntersectionExitOnly intersect_inv_ray_with_aabb_exit_only(vec3 inv_ray_d
 }
 
 uint FPM_octree_closest_child(vec3 pos, uint size_exp) {
-	uvec3 xyz = (floatBitsToUint(pos) >> size_exp) & 1u;
-	return xyz.x + xyz.y * 2u + xyz.z * 4u;
+	uvec3 xyz = (floatBitsToUint(pos) >> size_exp) & 3u;
+	return xyz.x + xyz.y * 4u + xyz.z * 16u;
 }
 
 vec3 FPM_floor_size(vec3 pos, uint size_exp) {

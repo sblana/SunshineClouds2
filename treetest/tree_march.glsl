@@ -71,7 +71,7 @@ void main() {
 
 			// go down
 			while (!tree_buffer.nodes[cur_node_idxs[cur_layer]].is_leaf_node) {
-				--size_exp;
+				size_exp -= 2u;
 				uint closest_child_j = FPM_octree_closest_child(ray_pos, size_exp);
 				TreeNodeIdx_t closest_child_idx = tree_buffer.nodes[cur_node_idxs[cur_layer]].child_nodes_start_idx + closest_child_j;
 				cur_node_idxs[cur_layer + 1] = closest_child_idx;
@@ -110,7 +110,7 @@ void main() {
 
 			// need to find common ancestor of the current node and the next node.
 			uvec3 diff_pos = floatBitsToUint(ray_pos) ^ floatBitsToUint(tn_aabb.min);
-			int diff_exp = findMSB(diff_pos.x | diff_pos.y | diff_pos.z) + 1;
+			int diff_exp = findMSB((diff_pos.x | diff_pos.y | diff_pos.z) & 0xFFAAAAAA) + 2;
 			// go up
 			if (diff_exp > size_exp) {
 				size_exp = diff_exp;
@@ -118,7 +118,7 @@ void main() {
 				if (diff_exp > 23u) {
 					break;
 				}
-				cur_layer = 23 - diff_exp;
+				cur_layer = (23 - diff_exp) >> 1;
 			}
 		}
 	}
