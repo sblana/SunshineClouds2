@@ -38,7 +38,8 @@ void main() {
 	rd_world = mat3(genericData.view) * rd_world;
 	// Define the ray properties
 
-	vec3 ray_dir = normalize(rd_world);
+	vec3 global_ray_dir = normalize(rd_world);
+	vec3 ray_dir = global_ray_dir;
 	vec3 inv_ray_dir = 1.0 / ray_dir;
 	// local to tree root
 	vec3 ray_origin = genericData.view[3].xyz - TREE_ROOT_ORIGIN;
@@ -52,7 +53,6 @@ void main() {
 
 	RayAABBIntersection root_intersection = intersect_ray_with_aabb(ray_dir, ray_origin, AABB3(vec3(0.0), TREE_ROOT_SIZE));
 
-	uint max_layer = 0;
 	uint n_iters = 0;
 	uint64_t clock_before_rt = clockRealtimeEXT();
 	// uses the idea of a fractional tree and its float bit manipulation
@@ -65,9 +65,9 @@ void main() {
 		ray_dir = normalize(ray_dir / (TREE_ROOT_SIZE / largest_tree_root_axis));
 		inv_ray_dir = 1.0 / ray_dir;
 		uint size_exp = 23u; // (mantissa bit width -> root)
+		AABB3 tn_aabb = AABB3(vec3(1.0), vec3(1.9999999));
 		for (int i = 0; i < MAX_NUM_STEPS; ++i) {
 			n_iters++;
-			AABB3 tn_aabb = AABB3(vec3(1.0), vec3(1.9999999));
 
 			// go down
 			while (!tree_buffer.nodes[cur_node_idxs[cur_layer]].is_leaf_node) {
@@ -77,7 +77,6 @@ void main() {
 				cur_node_idxs[cur_layer + 1] = closest_child_idx;
 				cur_layer += 1;
 			}
-			max_layer = uint(max(cur_layer, max_layer));
 
 			vec3 size = vec3(uintBitsToFloat((size_exp + 127u - 23u) << 23u));
 			tn_aabb.min = FPM_floor_size(ray_pos, size_exp);
@@ -90,13 +89,12 @@ void main() {
 				float total_t = length(next_intersection.exit_t * ray_dir * TREE_ROOT_SIZE);
 				if (cur_layer == (TREE_NUM_MAX_LAYERS - 1)) {
 					vec3 global_pos = (ray_pos - 1.0) * TREE_ROOT_SIZE + TREE_ROOT_ORIGIN;
-					vec3 global_ray_dir = normalize(ray_dir * (TREE_ROOT_SIZE / largest_tree_root_axis));
 					data = 0.0;
 					const uint num_samples = 2;
-					for (uint i = 0; i < num_samples; ++i) {
-						data += sample_scene(global_pos + global_ray_dir * (total_t / float(num_samples) * (i + 0.5)));
+					for (uint k = 0; k < num_samples; ++k) {
+						data += sample_scene(global_pos + global_ray_dir * (total_t / num_samples * (k + 0.5)));
 					}
-					data /= float(num_samples);
+					data = data / num_samples;
 				}
 				density += data * total_t;
 				if (density > 2.0) {
@@ -105,7 +103,10 @@ void main() {
 				}
 			}
 
-			ray_pos = ray_pos + ray_dir * (next_intersection.exit_t + vec3(0.0001));
+			// clamping
+			vec3 neighbour_min = tn_aabb.min + uvec3(equal(next_intersection.exit_t.xxx, next_intersection.t_far_i)) * sign(ray_dir) * size;
+			vec3 neighbour_max = intBitsToFloat(floatBitsToInt(neighbour_min) + ((1 << size_exp) - 1));
+			ray_pos = clamp(ray_pos + ray_dir * next_intersection.exit_t, neighbour_min, neighbour_max);
 
 			// need to find common ancestor of the current node and the next node.
 			uvec3 diff_pos = floatBitsToUint(ray_pos) ^ floatBitsToUint(tn_aabb.min);
