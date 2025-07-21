@@ -127,6 +127,17 @@ bool renderBayer(ivec2 fragCoord, int framecount)
 
 //Sample functions
 
+float sampleEffectorAdditive(vec3 worldPosition) {
+	float effectorAdditive = 0.0;
+	for (int i = 0; i < int(genericData.data.pointEffectorCount); i++) {
+		float effectorDistance = distance(pointEffectors[i].position, worldPosition);
+		if (effectorDistance < pointEffectors[i].radius){
+			effectorAdditive += mix(pointEffectors[i].power, 0.0, effectorDistance / pointEffectors[i].radius);
+		}
+	}
+	return effectorAdditive;
+}
+
 float sampleScene(
 	vec3 largeNoisePos, 
 	vec3 mediumNoisePos, 
@@ -160,12 +171,7 @@ float sampleScene(
 	worldPosition += vec3(WindDirection.x, 0.0, WindDirection.y) * genericData.data.windSweptPower * quadraticIn(1.0 - clamp(clampedWorldHeight / genericData.data.windSweptRange, 0.0, 1.0));
 
 	if (lod > 0.0){
-		for (int i = 0; i < int(genericData.data.pointEffectorCount); i++){
-			float effectorDistance = distance(pointEffectors[i].position, worldPosition);
-			if (effectorDistance < pointEffectors[i].radius){
-				effectorAdditive += mix(pointEffectors[i].power, 0.0, effectorDistance / pointEffectors[i].radius) * edgeFade;
-			}
-		}
+		effectorAdditive = sampleEffectorAdditive(worldPosition) * edgeFade;
 
 		if (!ambientsample && curlHeightSample > 0.0 && min(curlPower, lod) > 0.5){
 			
@@ -215,12 +221,7 @@ float sampleSceneCoarse(
 	worldPosition += vec3(WindDirection.x, 0.0, WindDirection.y) * genericData.data.windSweptPower * quadraticIn(1.0 - clamp(clampedWorldHeight / genericData.data.windSweptRange, 0.0, 1.0));
 
 	if (lod > 0.0){
-		for (int i = 0; i < int(genericData.data.pointEffectorCount); i++){
-			float effectorDistance = distance(pointEffectors[i].position, worldPosition);
-			if (effectorDistance < pointEffectors[i].radius){
-				effectorAdditive += mix(pointEffectors[i].power, 0.0, effectorDistance / pointEffectors[i].radius) * edgeFade;
-			}
-		}
+		effectorAdditive = sampleEffectorAdditive(worldPosition) * edgeFade;
 	}
 
 	float largeShape = texture(large_noise, (worldPosition - largeNoisePos) / largenoisescale).r * extraLargeShape;
